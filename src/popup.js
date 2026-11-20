@@ -60,6 +60,9 @@ function calculateRemindAt(freq) {
     case "hourly":
       target = new Date(now.getTime() + 60 * 60 * 1000);
       break;
+    case "5min":
+      target = new Date(now.getTime() + 5 * 60 * 1000);
+      break;
     case "today_evening":
       target.setHours(20, 0, 0, 0);
       if (target <= now) {
@@ -144,20 +147,29 @@ window.addEventListener("keydown", (e) => {
     return;
   }
 
-  // Quick number keys (1-5) when not inside text area typing numbers, or with Alt key
+  // Quick number keys (1-6) with Alt key
   if (e.altKey) {
     if (e.key === "1") { e.preventDefault(); setFrequency("hourly"); }
-    if (e.key === "2") { e.preventDefault(); setFrequency("today_evening"); }
-    if (e.key === "3") { e.preventDefault(); setFrequency("daily"); }
-    if (e.key === "4") { e.preventDefault(); setFrequency("weekly"); }
-    if (e.key === "5") { e.preventDefault(); setFrequency("custom"); }
+    if (e.key === "2") { e.preventDefault(); setFrequency("5min"); }
+    if (e.key === "3") { e.preventDefault(); setFrequency("today_evening"); }
+    if (e.key === "4") { e.preventDefault(); setFrequency("daily"); }
+    if (e.key === "5") { e.preventDefault(); setFrequency("weekly"); }
+    if (e.key === "6") { e.preventDefault(); setFrequency("custom"); }
   }
 });
 
 // Auto focus on input when window gains focus
 window.addEventListener("focus", () => {
   taskInput.focus();
+  taskInput.select();
 });
+
+if (window.__TAURI__) {
+  window.__TAURI__.event.listen("tauri://focus", () => {
+    taskInput.focus();
+    taskInput.select();
+  });
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   taskInput.focus();

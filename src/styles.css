@@ -489,6 +489,11 @@ kbd {
   max-width: 90vw;
 }
 
+.edit-dialog {
+  width: 520px;
+  max-width: 90vw;
+}
+
 .help-dialog {
   width: 760px;
   height: 520px;
@@ -538,6 +543,117 @@ kbd {
   padding: 10px 18px;
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Synchronized Frequency & Button Styles */
+.frequency-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.frequency-grid {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.freq-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: var(--text-main);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.freq-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.freq-btn.active {
+  background: #eff6ff;
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
+}
+
+.btn-num {
+  font-size: 9.5px;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.freq-btn.active .btn-num {
+  background: #bfdbfe;
+  color: #1e40af;
+}
+
+.custom-time-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.custom-time-row.hidden {
+  display: none;
+}
+
+.custom-time-row input[type="datetime-local"] {
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-main);
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.custom-time-row input[type="datetime-local"]:focus {
+  border-color: var(--accent-blue);
+}
+
+textarea#editText {
+  width: 100%;
+  resize: vertical;
+  min-height: 70px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  padding: 8px 10px;
+  color: var(--text-main);
+  background: #ffffff;
+  border: 1.5px solid var(--border-light);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: text;
+}
+
+textarea#editText:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
 }
 
 /* About Box Content */

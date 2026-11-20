@@ -87,6 +87,29 @@ fn add_reminder(
 }
 
 #[tauri::command]
+fn update_reminder(
+    app: AppHandle,
+    state: State<AppState>,
+    id: String,
+    text: String,
+    remind_type: String,
+    remind_at: String,
+) -> Result<(), String> {
+    {
+        let mut lock = state.reminders.lock().unwrap();
+        if let Some(item) = lock.iter_mut().find(|r| r.id == id) {
+            item.text = text;
+            item.remind_type = remind_type;
+            item.remind_at = remind_at;
+        }
+        save_storage(&state.storage_path, &lock);
+    }
+
+    let _ = app.emit("reminder-updated", ());
+    Ok(())
+}
+
+#[tauri::command]
 fn toggle_reminder(app: AppHandle, state: State<AppState>, id: String) -> Result<(), String> {
     {
         let mut lock = state.reminders.lock().unwrap();
@@ -151,6 +174,46 @@ fn hide_popup(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(target_os = "windows")]
+unsafe extern "system" {
+    fn MessageBeep(u_type: u32) -> i32;
+}
+
+#[tauri::command]
+fn test_reminder_alert(app: AppHandle, state: State<AppState>, id: String) -> Result<(), String> {
+    let reminder_opt = {
+        let lock = state.reminders.lock().unwrap();
+        lock.iter().find(|r| r.id == id).cloned()
+    };
+
+    if let Some(item) = reminder_opt {
+        #[cfg(target_os = "windows")]
+        unsafe {
+            MessageBeep(0x00000040);
+        }
+
+        if let Some(win) = app.get_webview_window("main") {
+            let _ = win.unminimize();
+            let _ = win.show();
+            let _ = win.set_always_on_top(true);
+            let _ = win.set_focus();
+            let _ = win.request_user_attention(Some(tauri::UserAttentionType::Critical));
+            let _ = win.set_always_on_top(false);
+        }
+
+        let _ = app.emit("reminder-alert", &item);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn hide_main_window(app: AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.hide();
+    }
+    Ok(())
+}
+
 // Background scheduler
 fn start_scheduler(app: AppHandle, state_reminders: Arc<Mutex<Vec<Reminder>>>, storage_path: PathBuf) {
     std::thread::spawn(move || loop {
@@ -188,6 +251,10 @@ fn start_scheduler(app: AppHandle, state_reminders: Arc<Mutex<Vec<Reminder>>>, s
 
                             // Calculate next recurring time if applicable
                             match reminder.remind_type.as_str() {
+                                "5min" => {
+                                    let next = now + Duration::minutes(5);
+                                    reminder.remind_at = next.to_rfc3339();
+                                }
                                 "hourly" => {
                                     let next = now + Duration::hours(1);
                                     reminder.remind_at = next.to_rfc3339();
@@ -216,6 +283,21 @@ fn start_scheduler(app: AppHandle, state_reminders: Arc<Mutex<Vec<Reminder>>>, s
 
         if !triggered_alerts.is_empty() {
             let _ = app.emit("reminder-updated", ());
+
+            #[cfg(target_os = "windows")]
+            unsafe {
+                MessageBeep(0x00000040); // MB_ICONASTERISK (Windows system chime)
+            }
+
+            if let Some(win) = app.get_webview_window("main") {
+                let _ = win.unminimize();
+                let _ = win.show();
+                let _ = win.set_always_on_top(true);
+                let _ = win.set_focus();
+                let _ = win.request_user_attention(Some(tauri::UserAttentionType::Critical));
+                let _ = win.set_always_on_top(false);
+            }
+
             for item in triggered_alerts {
                 // Windows toast notification
                 let _ = app
@@ -256,17 +338,17 @@ pub fn run() {
             // Start background reminder checker
             start_scheduler(app_handle.clone(), Arc::clone(&reminders_arc), storage_path);
 
-            // Register global shortcut F12
-            if let Err(err) = app.global_shortcut().on_shortcut("F12", move |app, _shortcut, event| {
-                if event.state() == ShortcutState::Pressed {
-                    if let Some(popup) = app.get_webview_window("popup") {
-                        let _ = popup.center();
-                        let _ = popup.show();
-                        let _ = popup.set_focus();
+            // Register global shortcuts: F12, Ctrl+F12, Alt+F12, and Alt+K
+            for shortcut_key in ["F12", "Ctrl+F12", "Alt+F12", "Alt+K"] {
+                let _ = app.global_shortcut().on_shortcut(shortcut_key, move |app, _shortcut, event| {
+                    if event.state() == ShortcutState::Pressed {
+                        if let Some(popup) = app.get_webview_window("popup") {
+                            let _ = popup.center();
+                            let _ = popup.show();
+                            let _ = popup.set_focus();
+                        }
                     }
-                }
-            }) {
-                eprintln!("Warning: Failed to register F12 global shortcut: {}", err);
+                });
             }
 
             // Setup System Tray
@@ -321,11 +403,14 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_reminders,
             add_reminder,
+            update_reminder,
             toggle_reminder,
             delete_reminder,
             snooze_reminder,
+            test_reminder_alert,
             show_popup,
-            hide_popup
+            hide_popup,
+            hide_main_window
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

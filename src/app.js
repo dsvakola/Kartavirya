@@ -37,6 +37,18 @@ const helpSearchInput = document.getElementById("helpSearchInput");
 const helpNav = document.getElementById("helpNav");
 const helpContentPane = document.getElementById("helpContentPane");
 
+// Edit Modal
+const editOverlay = document.getElementById("editOverlay");
+const btnCloseEdit = document.getElementById("btnCloseEdit");
+const btnCancelEdit = document.getElementById("btnCancelEdit");
+const btnSaveEdit = document.getElementById("btnSaveEdit");
+const editText = document.getElementById("editText");
+const editFreqButtons = document.querySelectorAll("#editFreqButtons .freq-btn");
+const editCustomPicker = document.getElementById("editCustomPicker");
+const editCustomDatetime = document.getElementById("editCustomDatetime");
+let editingReminderId = null;
+let editSelectedFreq = "hourly";
+
 // Alert Modal
 const alertOverlay = document.getElementById("alertOverlay");
 const alertTaskText = document.getElementById("alertTaskText");
@@ -52,6 +64,9 @@ function playCatchyChime() {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
+    if (ctx.state === "suspended") {
+      ctx.resume();
+    }
     const now = ctx.currentTime;
 
     // 3-note pleasant melodic alert chime (C5 -> E5 -> G5)
@@ -148,6 +163,7 @@ function renderReminders() {
 
   remindersList.innerHTML = filtered.map((item) => {
     const freqLabels = {
+      "5min": "In 5 Mins",
       hourly: "Hourly",
       today_evening: "Today Evening",
       daily: "Daily",
@@ -163,7 +179,7 @@ function renderReminders() {
         <div class="card-left">
           <input type="checkbox" class="card-checkbox" ${item.is_completed ? "checked" : ""} title="Toggle Completion" />
           <div class="card-content">
-            <div class="card-text">${escapeHtml(item.text)}</div>
+            <div class="card-text" title="Double click to edit">${escapeHtml(item.text)}</div>
             <div class="card-meta">
               <span class="freq-tag">🔄 ${freqText}</span>
               <span class="time-tag">⏰ Due: ${dueTime}</span>
@@ -172,6 +188,8 @@ function renderReminders() {
           </div>
         </div>
         <div class="card-right">
+          <button class="btn-card-action btn-test" title="Test Alarm Alert Now">🔔 Test</button>
+          <button class="btn-card-action btn-edit" title="Edit Note or Schedule">✎ Edit</button>
           ${!item.is_completed ? `<button class="btn-card-action btn-snooze" title="Snooze 1 Hour">+1h</button>` : ""}
           <button class="btn-card-action btn-delete" title="Delete Reminder">✕</button>
         </div>
@@ -182,15 +200,33 @@ function renderReminders() {
   // Attach card event listeners
   remindersList.querySelectorAll(".reminder-card").forEach((card) => {
     const id = card.dataset.id;
+    const item = reminders.find((r) => r.id === id);
     const chk = card.querySelector(".card-checkbox");
     const btnDel = card.querySelector(".btn-delete");
     const btnSnooze = card.querySelector(".btn-snooze");
+    const btnEdit = card.querySelector(".btn-edit");
+    const btnTest = card.querySelector(".btn-test");
+    const cardTextEl = card.querySelector(".card-text");
 
     if (chk) {
       chk.addEventListener("change", async () => {
         await invoke("toggle_reminder", { id });
         await loadReminders();
       });
+    }
+
+    if (btnTest) {
+      btnTest.addEventListener("click", async () => {
+        await invoke("test_reminder_alert", { id });
+      });
+    }
+
+    if (btnEdit && item) {
+      btnEdit.addEventListener("click", () => openEditModal(item));
+    }
+
+    if (cardTextEl && item) {
+      cardTextEl.addEventListener("dblclick", () => openEditModal(item));
     }
 
     if (btnDel) {
@@ -431,15 +467,155 @@ helpSearchInput.addEventListener("input", (e) => {
   });
 });
 
-// Global Esc listener to close open modals
-window.addEventListener("keydown", (e) => {
+// Edit Modal Logic
+function openEditModal(reminder) {
+  editingReminderId = reminder.id;
+  editText.value = reminder.text;
+  setEditFrequency(reminder.remind_type || "hourly");
+
+  if (reminder.remind_at) {
+    try {
+      const d = new Date(reminder.remind_at);
+      const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      editCustomDatetime.value = localIso;
+    } catch {
+      // fallback
+    }
+  }
+
+  editOverlay.classList.remove("hidden");
+  setTimeout(() => editText.focus(), 50);
+}
+
+function closeEditModal() {
+  editOverlay.classList.add("hidden");
+  editingReminderId = null;
+}
+
+function setEditFrequency(freq) {
+  editSelectedFreq = freq;
+  editFreqButtons.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.freq === freq);
+  });
+  if (freq === "custom") {
+    editCustomPicker.classList.remove("hidden");
+  } else {
+    editCustomPicker.classList.add("hidden");
+  }
+}
+
+editFreqButtons.forEach((btn) => {
+  btn.addEventListener("click", () => setEditFrequency(btn.dataset.freq));
+});
+
+function calculateEditRemindAt(freq) {
+  const now = new Date();
+  let target = new Date();
+
+  switch (freq) {
+    case "hourly":
+      target = new Date(now.getTime() + 60 * 60 * 1000);
+      break;
+    case "5min":
+      target = new Date(now.getTime() + 5 * 60 * 1000);
+      break;
+    case "today_evening":
+      target.setHours(20, 0, 0, 0);
+      if (target <= now) {
+        target.setDate(target.getDate() + 1);
+        target.setHours(9, 0, 0, 0);
+      }
+      break;
+    case "daily":
+      target.setDate(target.getDate() + 1);
+      target.setHours(9, 0, 0, 0);
+      break;
+    case "weekly":
+      target.setDate(target.getDate() + 7);
+      target.setHours(9, 0, 0, 0);
+      break;
+    case "custom":
+      if (editCustomDatetime.value) {
+        target = new Date(editCustomDatetime.value);
+      } else {
+        target = new Date(now.getTime() + 60 * 60 * 1000);
+      }
+      break;
+    default:
+      target = new Date(now.getTime() + 60 * 60 * 1000);
+  }
+
+  return target.toISOString();
+}
+
+async function saveEditModal() {
+  if (!editingReminderId) return;
+  const newText = editText.value.trim();
+  if (!newText) return;
+
+  const newRemindAt = calculateEditRemindAt(editSelectedFreq);
+
+  try {
+    await invoke("update_reminder", {
+      id: editingReminderId,
+      text: newText,
+      remindType: editSelectedFreq,
+      remindAt: newRemindAt
+    });
+    closeEditModal();
+    await loadReminders();
+  } catch (err) {
+    console.error("Failed to update reminder:", err);
+  }
+}
+
+btnSaveEdit.addEventListener("click", saveEditModal);
+btnCloseEdit.addEventListener("click", closeEditModal);
+btnCancelEdit.addEventListener("click", closeEditModal);
+
+editText.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    saveEditModal();
+  }
+});
+
+// Global Keyboard Handler (F12 and Esc)
+window.addEventListener("keydown", async (e) => {
+  // Inside Edit modal, Alt + 1-6 switches frequency
+  if (!editOverlay.classList.contains("hidden") && e.altKey) {
+    if (e.key === "1") { e.preventDefault(); setEditFrequency("hourly"); return; }
+    if (e.key === "2") { e.preventDefault(); setEditFrequency("5min"); return; }
+    if (e.key === "3") { e.preventDefault(); setEditFrequency("today_evening"); return; }
+    if (e.key === "4") { e.preventDefault(); setEditFrequency("daily"); return; }
+    if (e.key === "5") { e.preventDefault(); setEditFrequency("weekly"); return; }
+    if (e.key === "6") { e.preventDefault(); setEditFrequency("custom"); return; }
+  }
+
+  // F12: Open Quick Capture popup from inside the main window
+  if (e.key === "F12") {
+    e.preventDefault();
+    triggerQuickEntry();
+    return;
+  }
+
+  // Escape Key: Close modals first, or hide main window to system tray
   if (e.key === "Escape") {
-    if (!alertOverlay.classList.contains("hidden")) {
+    if (!editOverlay.classList.contains("hidden")) {
+      closeEditModal();
+    } else if (!alertOverlay.classList.contains("hidden")) {
       alertOverlay.classList.add("hidden");
     } else if (!aboutOverlay.classList.contains("hidden")) {
       closeAbout();
     } else if (!helpOverlay.classList.contains("hidden")) {
       closeHelp();
+    } else {
+      // No dialog is open: hide the main window to the system tray!
+      try {
+        await invoke("hide_main_window");
+      } catch (err) {
+        console.error("Failed to hide main window:", err);
+      }
     }
   }
 });
