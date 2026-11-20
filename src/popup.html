@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kartavirya Quick Entry</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body class="popup-body">
+  <div class="popup-container">
+    <header class="popup-header">
+      <div class="header-left">
+        <img src="assets/icon.png" alt="Kartavirya" class="popup-icon" />
+        <span class="popup-title">Kartavirya – Quick Capture</span>
+      </div>
+      <div class="header-right">
+        <span id="liveTimestamp" class="timestamp-pill">--:--</span>
+      </div>
+    </header>
+
+    <main class="popup-content">
+      <div class="input-group">
+        <textarea 
+          id="taskInput" 
+          rows="2" 
+          placeholder="What do you want to remember? (e.g., Car keys on table, Call client at 4 PM...)"
+          autofocus
+        ></textarea>
+      </div>
+
+      <div class="frequency-section">
+        <label class="section-label">Remind Me:</label>
+        <div class="frequency-grid" id="freqButtons">
+          <button type="button" class="freq-btn active" data-freq="hourly" title="Shortcut: Press 1">
+            <span class="btn-num">1</span> Every Hour
+          </button>
+          <button type="button" class="freq-btn" data-freq="today_evening" title="Shortcut: Press 2">
+            <span class="btn-num">2</span> Today Evening
+          </button>
+          <button type="button" class="freq-btn" data-freq="daily" title="Shortcut: Press 3">
+            <span class="btn-num">3</span> Daily
+          </button>
+          <button type="button" class="freq-btn" data-freq="weekly" title="Shortcut: Press 4">
+            <span class="btn-num">4</span> Weekly
+          </button>
+          <button type="button" class="freq-btn" data-freq="custom" title="Shortcut: Press 5">
+            <span class="btn-num">5</span> Custom Date/Time
+          </button>
+        </div>
+      </div>
+
+      <div id="customTimePicker" class="custom-time-row hidden">
+        <label for="customDatetime">Choose alert time:</label>
+        <input type="datetime-local" id="customDatetime" />
+      </div>
+    </main>
+
+    <footer class="popup-footer">
+      <div class="shortcut-hints">
+        <span class="hint-badge"><kbd>Enter</kbd> Save & Close</span>
+        <span class="hint-badge"><kbd>Esc</kbd> Discard</span>
+      </div>
+      <div class="footer-actions">
+        <button id="btnCancel" class="btn-secondary" type="button">Discard</button>
+        <button id="btnSave" class="btn-primary" type="button">Save Reminder</button>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

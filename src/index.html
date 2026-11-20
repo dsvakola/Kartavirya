@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kartavirya – Reminder Companion</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <img src="assets/icon.png" alt="Kartavirya Logo" class="brand-icon" />
+        <div class="brand-text">
+          <h1 class="brand-title">Kartavirya</h1>
+          <span class="brand-subtitle">Reminder Companion</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="f12-badge" title="Press F12 globally to capture a reminder">
+          <kbd>F12</kbd> <span>Quick Capture</span>
+        </div>
+        <!-- Only two small buttons for Help and About as instructed -->
+        <button id="btnHelp" class="btn-tool" type="button" title="Open Help (F1)">
+          <span class="btn-icon">?</span> Help
+        </button>
+        <button id="btnAbout" class="btn-tool" type="button" title="About Kartavirya">
+          <span class="btn-icon">ℹ</span> About
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="app-main">
+      <!-- Toolbar & Filters -->
+      <section class="toolbar-section">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Search tasks, misplaced items, or notes..." />
+          <button id="btnClearSearch" class="btn-clear hidden" type="button">×</button>
+        </div>
+
+        <div class="filter-group">
+          <button class="filter-btn active" data-filter="all">All (<span id="countAll">0</span>)</button>
+          <button class="filter-btn" data-filter="active">Active (<span id="countActive">0</span>)</button>
+          <button class="filter-btn" data-filter="completed">Completed (<span id="countCompleted">0</span>)</button>
+        </div>
+
+        <button id="btnNewReminder" class="btn-accent" type="button">
+          + New Reminder <kbd>F12</kbd>
+        </button>
+      </section>
+
+      <!-- Reminder Cards List -->
+      <section class="reminders-container">
+        <div id="remindersList" class="reminders-list">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Empty state placeholder -->
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon-wrapper">
+            <img src="assets/icon.png" alt="Reminder Icon" class="empty-icon" />
+          </div>
+          <h3>No Reminders Found</h3>
+          <p>Press <kbd>F12</kbd> anywhere on your computer to instantly log an item or task.</p>
+          <button id="btnEmptyAdd" class="btn-accent-sm" type="button">Create First Reminder</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Status Bar -->
+    <footer class="app-footer">
+      <div class="status-left">
+        <span class="status-indicator online"></span>
+        <span id="statusText">Kartavirya background listener active (F12)</span>
+      </div>
+      <div class="status-right">
+        <span id="statusClock">--:--</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- In-App Catchy Alert Notification Modal -->
+  <div id="alertOverlay" class="modal-overlay hidden">
+    <div class="alert-modal">
+      <div class="alert-header">
+        <div class="alert-title-box">
+          <span class="alert-bell-anim">🔔</span>
+          <h3>Kartavirya Reminder!</h3>
+        </div>
+        <span id="alertTime" class="alert-time-badge">Just now</span>
+      </div>
+      <div class="alert-body">
+        <p id="alertTaskText" class="alert-task-text">Your scheduled task is due now!</p>
+        <div id="alertCreatedInfo" class="alert-created-info">Logged on: --</div>
+      </div>
+      <div class="alert-footer">
+        <button id="btnAlertSnooze" class="btn-secondary" type="button">Snooze 10m</button>
+        <button id="btnAlertDismiss" class="btn-secondary" type="button">Dismiss</button>
+        <button id="btnAlertComplete" class="btn-primary" type="button">Mark Done ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: About Dialog -->
+  <div id="aboutOverlay" class="modal-overlay hidden">
+    <div class="modal-dialog about-dialog">
+      <div class="modal-header">
+        <h2>About Kartavirya</h2>
+        <button id="btnCloseAbout" class="modal-close" type="button" title="Close (Esc)">×</button>
+      </div>
+      <div class="modal-body about-body">
+        <div class="about-logos">
+          <img src="assets/icon.png" alt="Kartavirya App Icon" class="about-app-icon" />
+          <img src="assets/logo.png" alt="Vidyasagar Academy Logo" class="about-vsa-logo" />
+        </div>
+        <h3 class="about-title">Kartavirya – Reminder Companion</h3>
+        <p class="about-version">Version 1.0.0 (Windows 64-bit)</p>
+        <div class="about-attribution">
+          <strong>Developed by:</strong> Prof. Dattaraj S. Vidyasagar and Prof. Yash D. Vidyasagar, for Vidyasagar Academy
+        </div>
+        <p class="about-desc">
+          Inspired by King Kartavirya Arjuna of Mahishmati, revered for his thousand hands that swiftly locate lost, misplaced, or forgotten belongings and tasks.
+        </p>
+
+        <div class="about-links">
+          <div class="link-item">
+            <span class="link-label">Privacy Policy:</span>
+            <a href="https://github.com/dsvakola/Kartavirya/blob/main/privacy-policy.md" target="_blank" class="external-link" id="linkPrivacy">View Privacy Policy</a>
+          </div>
+          <div class="link-item">
+            <span class="link-label">Official Website:</span>
+            <a href="https://vsa.edu.in/" target="_blank" class="external-link" id="linkWebsite">https://vsa.edu.in/</a>
+          </div>
+          <div class="link-item">
+            <span class="link-label">Support Email:</span>
+            <a href="mailto:softinquiry@vsa.edu.in" class="external-link" id="linkEmail">softinquiry@vsa.edu.in</a>
+          </div>
+          <div class="link-item">
+            <span class="link-label">License:</span>
+            <span>GNU General Public License v3.0 (GPL-3.0)</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnOkAbout" class="btn-primary" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Help Window -->
+  <div id="helpOverlay" class="modal-overlay hidden">
+    <div class="modal-dialog help-dialog">
+      <div class="modal-header">
+        <div class="help-header-title">
+          <h2>Kartavirya Help & Documentation</h2>
+        </div>
+        <button id="btnCloseHelp" class="modal-close" type="button" title="Close (Esc)">×</button>
+      </div>
+      
+      <!-- Top search bar per Rule 12 -->
+      <div class="help-search-bar">
+        <input type="text" id="helpSearchInput" placeholder="Search help topics, shortcuts, features..." />
+      </div>
+
+      <div class="help-layout">
+        <!-- Left Pane: Categorized Topic Index -->
+        <nav class="help-nav" id="helpNav">
+          <button class="help-nav-item active" data-topic="intro">1. Introduction & Legend</button>
+          <button class="help-nav-item" data-topic="quick_capture">2. Quick Capture (F12)</button>
+          <button class="help-nav-item" data-topic="keyboard">3. Keyboard Shortcuts</button>
+          <button class="help-nav-item" data-topic="misplaced">4. Tracking Misplaced Items</button>
+          <button class="help-nav-item" data-topic="schedules">5. Frequencies & Alert Engine</button>
+          <button class="help-nav-item" data-topic="version_history">6. Version History</button>
+        </nav>
+
+        <!-- Right Pane: Topic Content & Version History -->
+        <div class="help-content" id="helpContentPane">
+          <!-- Dynamic topic loaded here -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btnOkHelp" class="btn-primary" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Kartavirya",
+  "version": "1.0.0",
+  "identifier": "in.edu.vsa.kartavirya",
+  "build": {
+    "frontendDist": "../src"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Kartavirya – Reminder Companion",
+        "width": 840,
+        "height": 620,
+        "minWidth": 640,
+        "minHeight": 480,
+        "center": true,
+        "visible": true
+      },
+      {
+        "label": "popup",
+        "title": "Kartavirya Quick Entry",
+        "url": "popup.html",
+        "width": 560,
+        "height": 260,
+        "center": true,
+        "resizable": false,
+        "visible": false,
+        "alwaysOnTop": true,
+        "decorations": false,
+        "skipTaskbar": true,
+        "shadow": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/64x64.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "publisher": "Vidyasagar Academy",
+    "copyright": "Copyright © 2026 Prof. Dattaraj S. Vidyasagar & Prof. Yash D. Vidyasagar, for Vidyasagar Academy",
+    "shortDescription": "Kartavirya – Reminder Companion",
+    "longDescription": "Kartavirya is an intuitive reminder companion for PC. Press F12 anywhere to quickly capture tasks, notes, or misplaced items with timely notifications."
+  }
+}

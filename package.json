@@ -1,0 +1,19 @@
+{
+  "name": "kartavirya",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Kartavirya - Reminder Companion",
+  "author": "Prof. Dattaraj S. Vidyasagar & Prof. Yash D. Vidyasagar (Vidyasagar Academy)",
+  "type": "module",
+  "scripts": {
+    "tauri": "tauri",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  },
+  "dependencies": {
+    "@tauri-apps/plugin-global-shortcut": "~2.4.1",
+    "@tauri-apps/plugin-notification": "~2.8.1"
+  }
+}
