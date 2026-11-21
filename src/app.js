@@ -25,6 +25,7 @@ const btnEmptyAdd = document.getElementById("btnEmptyAdd");
 const btnHelp = document.getElementById("btnHelp");
 const btnAbout = document.getElementById("btnAbout");
 const btnMinimizeTray = document.getElementById("btnMinimizeTray");
+const chkMinimizeToTray = document.getElementById("chkMinimizeToTray");
 
 // Modals
 const aboutOverlay = document.getElementById("aboutOverlay");
@@ -310,6 +311,24 @@ if (btnMinimizeTray) {
   });
 }
 
+if (chkMinimizeToTray) {
+  const savedMinToTray = localStorage.getItem("kartavirya_min_to_tray") === "true";
+  chkMinimizeToTray.checked = savedMinToTray;
+  if (savedMinToTray && window.__TAURI__) {
+    invoke("set_minimize_to_tray", { enabled: true }).catch(() => {});
+  }
+
+  chkMinimizeToTray.addEventListener("change", async () => {
+    const isChecked = chkMinimizeToTray.checked;
+    localStorage.setItem("kartavirya_min_to_tray", isChecked ? "true" : "false");
+    try {
+      await invoke("set_minimize_to_tray", { enabled: isChecked });
+    } catch (err) {
+      console.error("Failed to update minimize_to_tray:", err);
+    }
+  });
+}
+
 // Alert Notification Modal
 function showAlert(reminder) {
   activeAlertReminder = reminder;
@@ -414,9 +433,29 @@ const helpTopics = {
       </ul>
     `
   },
-  version_history: {
-    title: "6. Version History",
+  tray: {
+    title: "6. System Tray & Minimizing Options",
     content: `
+      <p>Kartavirya provides multiple flexible ways to minimize and keep running in the background:</p>
+      <ul>
+        <li><strong>Minimize to Tray Button:</strong> Click the <strong>📥 Minimize to Tray</strong> button in the top-right header to instantly vanish the app from the Windows taskbar into the system tray.</li>
+        <li><strong>Escape Key (<kbd>Esc</kbd>):</strong> Pressing <kbd>Esc</kbd> while viewing the dashboard cleanly minimizes the app to the tray.</li>
+        <li><strong>Close Button (<kbd>×</kbd>):</strong> Clicking the standard window close button hides the window to the tray, keeping your reminder timers and global <kbd>F12</kbd> shortcut active.</li>
+        <li><strong>Minimize Button Sends to Tray (Option):</strong> Check the <em>"Minimize button sends to Tray"</em> checkbox in the bottom status bar if you want clicking the standard Windows minimize button (<kbd>_</kbd>) to also vanish the app to the system tray instead of staying on the taskbar.</li>
+        <li><strong>System Tray Icon:</strong> Left-clicking the Kartavirya icon in the Windows notification area toggles the window between open and hidden. Right-clicking brings up quick options: <em>Open Dashboard</em>, <em>Minimize to System Tray</em>, <em>New Reminder (F12)</em>, and <em>Quit Kartavirya</em>.</li>
+      </ul>
+    `
+  },
+  version_history: {
+    title: "7. Version History",
+    content: `
+      <p><strong>Version 1.1.0 (Active Milestone - November 2026):</strong></p>
+      <ul>
+        <li><strong>Minimize to System Tray Options:</strong> Dedicated header button, system tray menu item, and status-bar toggle allowing the app button to vanish from the taskbar into the notification tray.</li>
+        <li><strong>Installer Icon:</strong> Native app icon cleanly integrated into NSIS <code>setup.exe</code> installer for Windows Explorer.</li>
+        <li><strong>Dual-Channel Audio & Alert Window:</strong> Fail-safe Windows <code>MessageBeep</code> alert and top-level floating reminder window.</li>
+        <li><strong>UI Synchronicity:</strong> Unified badge shortcuts (<kbd>1</kbd> to <kbd>6</kbd>) and synchronized modal layouts across Quick Capture and Edit dialogs.</li>
+      </ul>
       <p><strong>Version 1.0.0 (Initial Release - November 2026):</strong></p>
       <ul>
         <li>Lightweight, distraction-free light blue UI.</li>
@@ -425,7 +464,6 @@ const helpTopics = {
         <li>Background scheduler engine with periodic reminder verification.</li>
         <li>Catchy audio chimes and in-app animated alert modal.</li>
         <li>Search bar and filtering (All, Active, Completed).</li>
-        <li>System tray integration with quick actions.</li>
         <li>Modal About & Help dialogs meeting Vidyasagar Academy standards.</li>
       </ul>
     `
@@ -439,7 +477,7 @@ function selectHelpTopic(topicKey) {
     ${topic.content}
     <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
     <div style="font-size: 11px; color: #64748b; line-height: 1.4;">
-      <strong>Version History:</strong> v1.0.0 - Initial Release (Vidyasagar Academy standards compliant)
+      <strong>Version History:</strong> v1.1.0 – Tray Minimization & Alert Enhancements | v1.0.0 – Initial Release
     </div>
   `;
 

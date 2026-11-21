@@ -16,6 +16,10 @@ taskkill /f /im kartavirya.exe 2>nul
 if exist "Release" rmdir /s /q "Release"
 mkdir "Release"
 
+if exist "src-tauri\target\release\bundle\nsis" (
+    del /f /q "src-tauri\target\release\bundle\nsis\*.exe" 2>nul
+)
+
 echo [2/4] Building Kartavirya (Release Mode)...
 call pnpm tauri build --bundles nsis
 if %ERRORLEVEL% NEQ 0 (
@@ -36,11 +40,11 @@ if exist "src-tauri\target\release\kartavirya.exe" (
     exit /b 1
 )
 
-REM 2. Copy NSIS setup installer
+REM 2. Copy NSIS setup installer (newest built installer)
 set SETUP_FOUND=0
-for /r "src-tauri\target\release\bundle\nsis" %%f in (*.exe) do (
-    copy /y "%%f" "Release\setup.exe" >nul
-    echo   - Created: Release\setup.exe
+for /f "delims=" %%f in ('dir /b /a-d /o-d "src-tauri\target\release\bundle\nsis\*.exe" 2^>nul') do (
+    copy /y "src-tauri\target\release\bundle\nsis\%%f" "Release\setup.exe" >nul
+    echo   - Created: Release\setup.exe (from %%f)
     set SETUP_FOUND=1
     goto :done_setup
 )

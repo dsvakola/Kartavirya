@@ -22,8 +22,8 @@
         <div class="f12-badge" title="Press F12 globally to capture a reminder">
           <kbd>F12</kbd> <span>Quick Capture</span>
         </div>
-        <button id="btnMinimizeTray" class="btn-tool" type="button" title="Minimize to System Tray (Hides from taskbar)">
-          <span class="btn-icon">📥</span> To Tray
+        <button id="btnMinimizeTray" class="btn-tool" type="button" title="Minimize to System Tray (vanishes from taskbar, continues running in system tray)">
+          <span class="btn-icon">📥</span> Minimize to Tray
         </button>
         <button id="btnHelp" class="btn-tool" type="button" title="Open Help (F1)">
           <span class="btn-icon">?</span> Help
@@ -78,6 +78,12 @@
       <div class="status-left">
         <span class="status-indicator online"></span>
         <span id="statusText">Kartavirya background listener active (F12)</span>
+      </div>
+      <div class="status-center">
+        <label class="tray-toggle-label" title="When checked, clicking the window minimize button (_) will hide Kartavirya directly into the system tray instead of staying on the taskbar.">
+          <input type="checkbox" id="chkMinimizeToTray" />
+          <span>Minimize button sends to Tray</span>
+        </label>
       </div>
       <div class="status-right">
         <span id="statusClock">--:--</span>
@@ -223,7 +229,8 @@
           <button class="help-nav-item" data-topic="keyboard">3. Keyboard Shortcuts</button>
           <button class="help-nav-item" data-topic="misplaced">4. Tracking Misplaced Items</button>
           <button class="help-nav-item" data-topic="schedules">5. Frequencies & Alert Engine</button>
-          <button class="help-nav-item" data-topic="version_history">6. Version History</button>
+          <button class="help-nav-item" data-topic="tray">6. System Tray & Minimizing</button>
+          <button class="help-nav-item" data-topic="version_history">7. Version History</button>
         </nav>
 
         <!-- Right Pane: Topic Content & Version History -->

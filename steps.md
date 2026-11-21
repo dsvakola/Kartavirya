@@ -68,3 +68,14 @@
   - Intercepted window `CloseRequested` event so clicking `[X]` hides to tray instead of killing background timers.
 - **Step 5:** Fixed NSIS installer icon: explicitly bound `installerIcon: "icons/icon.ico"` in `tauri.conf.json` so `setup.exe` displays the Calendar Alert icon in Windows Explorer.
 - **Step 6:** Enhanced `build.bat` with automated process termination to prevent "Access is denied" file-lock errors.
+- **Step 7:** System Tray & Taskbar Minimization Options:
+  - Added prominent header button `[ 📥 Minimize to Tray ]` to instantly vanish the window and taskbar button into the system tray while remaining active.
+  - Added status bar setting toggle `☑ Minimize button sends to Tray` allowing users to choose whether the standard Windows minimize button (`_`) keeps the app in the taskbar or sends it directly into the system tray.
+  - Added "Minimize to System Tray" option in system tray context menu, with left-click toggle (show / hide / restore).
+  - Wired `get_minimize_to_tray` and `set_minimize_to_tray` commands in Rust backend with state synchronization and `localStorage` persistence.
+  - Added Topic 6 in Help window explaining all system tray options and updated Version History at the bottom of the Help page.
+- **Step 8:** NSIS Setup Installer Icon Resolution:
+  - Explicitly bound `installerIcon: "icons/icon.ico"` and `uninstallerIcon: "icons/icon.ico"` in `tauri.conf.json`.
+  - Updated `build.bat` with reverse-date sorting (`dir /o-d`) and pre-build cleanup of `bundle\nsis\*.exe` to prevent stale version installer collisions.
+  - Verified extracted icon MD5 checksum between `setup.exe` and `portable.exe` (`1BC2722F5DB2814C5038C9A225356666`) confirming 100% icon fidelity.
+  - Freshly built `Release/` folder with exactly two deliverables: `setup.exe` and `portable.exe`.

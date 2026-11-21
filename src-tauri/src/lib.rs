@@ -27,6 +27,7 @@ pub struct Reminder {
 pub struct AppState {
     pub reminders: Arc<Mutex<Vec<Reminder>>>,
     pub storage_path: PathBuf,
+    pub minimize_to_tray: Arc<Mutex<bool>>,
 }
 
 fn load_storage(path: &PathBuf) -> Vec<Reminder> {
@@ -214,6 +215,19 @@ fn hide_main_window(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn get_minimize_to_tray(state: State<AppState>) -> bool {
+    let lock = state.minimize_to_tray.lock().unwrap();
+    *lock
+}
+
+#[tauri::command]
+fn set_minimize_to_tray(state: State<AppState>, enabled: bool) -> Result<(), String> {
+    let mut lock = state.minimize_to_tray.lock().unwrap();
+    *lock = enabled;
+    Ok(())
+}
+
 // Background scheduler
 fn start_scheduler(app: AppHandle, state_reminders: Arc<Mutex<Vec<Reminder>>>, storage_path: PathBuf) {
     std::thread::spawn(move || loop {
@@ -328,11 +342,15 @@ pub fn run() {
             let storage_path = app_data.join("reminders.json");
             let initial_reminders = load_storage(&storage_path);
             let reminders_arc = Arc::new(Mutex::new(initial_reminders));
+            let minimize_to_tray_arc = Arc::new(Mutex::new(false));
+            let minimize_to_tray_state = Arc::clone(&minimize_to_tray_arc);
+            let minimize_to_tray_events = Arc::clone(&minimize_to_tray_arc);
 
             // State management
             app.manage(AppState {
                 reminders: Arc::clone(&reminders_arc),
                 storage_path: storage_path.clone(),
+                minimize_to_tray: minimize_to_tray_state,
             });
 
             // Start background reminder checker
@@ -353,9 +371,10 @@ pub fn run() {
 
             // Setup System Tray
             let show_i = MenuItem::with_id(app, "show", "Open Dashboard", true, None::<&str>)?;
+            let min_i = MenuItem::with_id(app, "min_tray", "Minimize to System Tray", true, None::<&str>)?;
             let new_i = MenuItem::with_id(app, "new", "New Reminder (F12)", true, None::<&str>)?;
             let quit_i = MenuItem::with_id(app, "quit", "Quit Kartavirya", true, None::<&str>)?;
-            let tray_menu = Menu::with_items(app, &[&show_i, &new_i, &quit_i])?;
+            let tray_menu = Menu::with_items(app, &[&show_i, &min_i, &new_i, &quit_i])?;
 
             if let Some(icon) = app.default_window_icon() {
                 let _tray = TrayIconBuilder::new()
@@ -368,8 +387,14 @@ pub fn run() {
                         }
                         "show" => {
                             if let Some(win) = app.get_webview_window("main") {
+                                let _ = win.unminimize();
                                 let _ = win.show();
                                 let _ = win.set_focus();
+                            }
+                        }
+                        "min_tray" => {
+                            if let Some(win) = app.get_webview_window("main") {
+                                let _ = win.hide();
                             }
                         }
                         "new" => {
@@ -390,21 +415,36 @@ pub fn run() {
                         {
                             let app = tray.app_handle();
                             if let Some(win) = app.get_webview_window("main") {
-                                let _ = win.show();
-                                let _ = win.set_focus();
+                                if win.is_visible().unwrap_or(false) && !win.is_minimized().unwrap_or(false) {
+                                    let _ = win.hide();
+                                } else {
+                                    let _ = win.unminimize();
+                                    let _ = win.show();
+                                    let _ = win.set_focus();
+                                }
                             }
                         }
                     })
                     .build(app)?;
             }
 
-            // Intercept close button on main window to minimize to system tray
+            // Intercept close button and minimize event on main window
             if let Some(main_win) = app.get_webview_window("main") {
                 let main_win_clone = main_win.clone();
                 main_win.on_window_event(move |event| {
-                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                        api.prevent_close();
-                        let _ = main_win_clone.hide();
+                    match event {
+                        tauri::WindowEvent::CloseRequested { api, .. } => {
+                            api.prevent_close();
+                            let _ = main_win_clone.hide();
+                        }
+                        tauri::WindowEvent::Resized(size) => {
+                            if size.width == 0 && size.height == 0 {
+                                if *minimize_to_tray_events.lock().unwrap() {
+                                    let _ = main_win_clone.hide();
+                                }
+                            }
+                        }
+                        _ => {}
                     }
                 });
             }
@@ -421,7 +461,9 @@ pub fn run() {
             test_reminder_alert,
             show_popup,
             hide_popup,
-            hide_main_window
+            hide_main_window,
+            get_minimize_to_tray,
+            set_minimize_to_tray
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
