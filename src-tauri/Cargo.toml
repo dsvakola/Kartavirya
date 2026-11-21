@@ -1,6 +1,6 @@
 [package]
 name = "kartavirya"
-version = "1.0.0"
+version = "1.1.0"
 description = "Kartavirya - Reminder Companion"
 authors = ["Prof. Dattaraj S. Vidyasagar", "Prof. Yash D. Vidyasagar", "Vidyasagar Academy"]
 edition = "2024"

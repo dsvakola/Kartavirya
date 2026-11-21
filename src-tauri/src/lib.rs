@@ -398,6 +398,17 @@ pub fn run() {
                     .build(app)?;
             }
 
+            // Intercept close button on main window to minimize to system tray
+            if let Some(main_win) = app.get_webview_window("main") {
+                let main_win_clone = main_win.clone();
+                main_win.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = main_win_clone.hide();
+                    }
+                });
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

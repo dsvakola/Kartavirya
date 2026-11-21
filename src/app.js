@@ -24,6 +24,7 @@ const btnNewReminder = document.getElementById("btnNewReminder");
 const btnEmptyAdd = document.getElementById("btnEmptyAdd");
 const btnHelp = document.getElementById("btnHelp");
 const btnAbout = document.getElementById("btnAbout");
+const btnMinimizeTray = document.getElementById("btnMinimizeTray");
 
 // Modals
 const aboutOverlay = document.getElementById("aboutOverlay");
@@ -298,6 +299,16 @@ async function triggerQuickEntry() {
 
 btnNewReminder.addEventListener("click", triggerQuickEntry);
 btnEmptyAdd.addEventListener("click", triggerQuickEntry);
+
+if (btnMinimizeTray) {
+  btnMinimizeTray.addEventListener("click", async () => {
+    try {
+      await invoke("hide_main_window");
+    } catch (err) {
+      console.error("Failed to hide to tray:", err);
+    }
+  });
+}
 
 // Alert Notification Modal
 function showAlert(reminder) {

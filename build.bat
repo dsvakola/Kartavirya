@@ -8,7 +8,11 @@ echo.
 set PROJECT_DIR=%~dp0
 cd /d "%PROJECT_DIR%"
 
-echo [1/4] Cleaning previous Release artifacts...
+echo [1/4] Closing any running instances and cleaning previous Release artifacts...
+taskkill /f /im portable.exe 2>nul
+taskkill /f /im setup.exe 2>nul
+taskkill /f /im kartavirya.exe 2>nul
+
 if exist "Release" rmdir /s /q "Release"
 mkdir "Release"
 

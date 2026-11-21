@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kartavirya Reminder Alert</title>
+  <link rel="stylesheet" href="alert.css" />
+</head>
+<body class="alert-body-root">
+  <div class="alert-container">
+    <div class="alert-header">
+      <div class="header-title">
+        <span class="bell-icon-pulse">🔔</span>
+        <h2>Kartavirya Reminder!</h2>
+      </div>
+      <span id="alertTimestamp" class="alert-time-pill">Due Now</span>
+    </div>
+
+    <div class="alert-content">
+      <div class="task-text-box">
+        <p id="alertTaskText">Your scheduled reminder is due!</p>
+      </div>
+      <div class="meta-row">
+        <span id="alertScheduleType" class="meta-badge">🔄 Hourly</span>
+        <span id="alertAddedDate" class="meta-date">Added: --</span>
+      </div>
+    </div>
+
+    <div class="alert-actions">
+      <button id="btnDismiss" class="btn-action btn-dismiss" type="button" title="Dismiss Alert (Esc)">
+        Dismiss <kbd>Esc</kbd>
+      </button>
+      <button id="btnSnooze10" class="btn-action btn-snooze" type="button" title="Snooze for 10 minutes">
+        Snooze 10m
+      </button>
+      <button id="btnComplete" class="btn-action btn-complete" type="button" title="Mark Done (Enter)">
+        Mark Done ✓ <kbd>Enter</kbd>
+      </button>
+    </div>
+  </div>
+
+  <script type="module" src="alert.js"></script>
+</body>
+</html>
