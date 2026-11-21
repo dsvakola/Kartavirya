@@ -53,4 +53,18 @@
     2. Native Windows Audio: Added direct Win32 `MessageBeep(0x40)` so a loud, clear, pleasant system notification chime sounds directly through Windows even if all windows are minimized or WebView audio is sleeping.
     3. Added `🔔 Test` button on every reminder card to instantly test the audio chime and animated alert modal on demand.
     4. Added `[ 2 ] In 5 Mins` quick reminder frequency option in both Quick Capture and Edit dialogs for easy short-term reminders and fast testing.
-- **Step 17:** Ready for user rebuild via `build.bat`.
+
+---
+
+## Version 1.1.0 (Active Milestone - Branch `v1.1.0`)
+- **Step 1:** User initiated modification request per Rule 8. Created and switched to dedicated Git branch `v1.1.0`.
+- **Step 2:** Bumped version to `1.1.0` in `package.json`, `Cargo.toml`, and `tauri.conf.json`.
+- **Step 3:** Overcame Windows environmental notification barriers:
+  - Created dedicated top-level floating Alarm Window (`alert.html`, `alert.css`, `alert.js`) configured with `alwaysOnTop: true`.
+  - Added OS-level sleep resistance and foreground lock bypass (`SetWindowPos`, `SetForegroundWindow`, `AttachThreadInput`).
+  - Implemented dual-channel audio: direct Win32 hardware `MessageBeep` / kernel tones + Web Audio API synthesizer.
+- **Step 4:** Added Minimize to System Tray capability:
+  - Added header action button `[ 📥 To Tray ]` and `Esc` shortcut to vanish the app from the taskbar into the system tray.
+  - Intercepted window `CloseRequested` event so clicking `[X]` hides to tray instead of killing background timers.
+- **Step 5:** Fixed NSIS installer icon: explicitly bound `installerIcon: "icons/icon.ico"` in `tauri.conf.json` so `setup.exe` displays the Calendar Alert icon in Windows Explorer.
+- **Step 6:** Enhanced `build.bat` with automated process termination to prevent "Access is denied" file-lock errors.
