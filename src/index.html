@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kartavirya – Reminder Companion</title>
+  <link rel="stylesheet" href="base.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -11,7 +12,7 @@
     <!-- Header -->
     <header class="app-header">
       <div class="brand">
-        <img src="assets/icon.png" alt="Kartavirya Logo" class="brand-icon" />
+        <img src="assets/icon.png" alt="" class="brand-icon" />
         <div class="brand-text">
           <h1 class="brand-title">Kartavirya</h1>
           <span class="brand-subtitle">Reminder Companion</span>
@@ -19,86 +20,106 @@
       </div>
 
       <div class="header-right">
-        <div class="f12-badge" title="Press F12 globally to capture a reminder">
-          <kbd>F12</kbd> <span>Quick Capture</span>
+        <div class="f12-badge" title="Press this shortcut anywhere to capture a reminder">
+          <kbd class="hotkey-label">F12</kbd> <span>Quick Capture</span>
         </div>
         <button id="btnMinimizeTray" class="btn-tool" type="button" title="Minimize to System Tray (vanishes from taskbar, continues running in system tray)">
-          <span class="btn-icon">📥</span> Minimize to Tray
+          <span data-icon="tray"></span> Minimize to Tray
+        </button>
+        <button id="btnSettings" class="btn-tool" type="button" title="Settings (Ctrl+,)">
+          <span data-icon="settings"></span> Settings
         </button>
         <button id="btnHelp" class="btn-tool" type="button" title="Open Help (F1)">
-          <span class="btn-icon">?</span> Help
+          <span data-icon="help"></span> Help
         </button>
         <button id="btnAbout" class="btn-tool" type="button" title="About Kartavirya">
-          <span class="btn-icon">ℹ</span> About
+          <span data-icon="info"></span> About
         </button>
       </div>
     </header>
 
     <!-- Main Workspace -->
     <main class="app-main">
-      <!-- Toolbar & Filters -->
       <section class="toolbar-section">
         <div class="search-box">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="searchInput" placeholder="Search tasks, misplaced items, or notes..." />
-          <button id="btnClearSearch" class="btn-clear hidden" type="button">×</button>
+          <span class="search-icon" data-icon="search"></span>
+          <input type="text" id="searchInput" placeholder="Search tasks, misplaced items, or notes... (Ctrl+F)" aria-label="Search" />
+          <button id="btnClearSearch" class="btn-clear hidden" type="button" aria-label="Clear search"><span data-icon="x"></span></button>
         </div>
 
-        <div class="filter-group">
-          <button class="filter-btn active" data-filter="all">All (<span id="countAll">0</span>)</button>
-          <button class="filter-btn" data-filter="active">Active (<span id="countActive">0</span>)</button>
-          <button class="filter-btn" data-filter="completed">Completed (<span id="countCompleted">0</span>)</button>
-          <button class="filter-btn" data-filter="deleted" title="Deleted reminders can be restored from here">🗑 Recently Deleted (<span id="countDeleted">0</span>)</button>
+        <div class="segmented" id="viewSwitch" role="group" aria-label="View">
+          <button type="button" data-view="list" class="active" title="List (Ctrl+1)"><span data-icon="list"></span> List</button>
+          <button type="button" data-view="calendar" title="Calendar (Ctrl+2)"><span data-icon="calendar"></span> Calendar</button>
         </div>
+
+        <button id="btnTodayNote" class="btn-tool" type="button" title="Write today's note (Ctrl+3)">
+          <span data-icon="note"></span> Today's Note
+        </button>
 
         <button id="btnNewReminder" class="btn-accent" type="button">
-          + New Reminder <kbd>F12</kbd>
+          <span data-icon="plus"></span> New <kbd class="hotkey-label">F12</kbd>
         </button>
       </section>
 
-      <!-- Warning shown when the reminders file had to be recovered -->
+      <section class="filter-section" id="filterSection">
+        <div class="filter-group" role="group" aria-label="Filter">
+          <button class="filter-btn active" data-filter="all">All (<span id="countAll">0</span>)</button>
+          <button class="filter-btn" data-filter="active">Active (<span id="countActive">0</span>)</button>
+          <button class="filter-btn" data-filter="completed">Completed (<span id="countCompleted">0</span>)</button>
+          <button class="filter-btn" data-filter="notes">Notes (<span id="countNotes">0</span>)</button>
+          <button class="filter-btn" data-filter="deleted" title="Deleted items can be restored from here"><span data-icon="trash"></span> Recently Deleted (<span id="countDeleted">0</span>)</button>
+        </div>
+        <select id="categoryFilter" aria-label="Filter by category" title="Filter by category"></select>
+      </section>
+
+      <!-- Warning shown when a data file had to be recovered -->
       <div id="loadWarning" class="load-warning hidden" role="alert">
         <span id="loadWarningText"></span>
-        <button id="btnCloseWarning" class="btn-clear" type="button" title="Close">×</button>
+        <button id="btnCloseWarning" class="btn-clear" type="button" title="Close" aria-label="Close"><span data-icon="x"></span></button>
       </div>
 
-      <!-- Reminder Cards List -->
-      <section class="reminders-container">
+      <!-- List view -->
+      <section class="reminders-container" id="listView">
         <div id="trashBar" class="trash-bar hidden">
-          <span>Reminders here are not alerted. Restore them, or remove them permanently.</span>
+          <span>Items here are not alerted. Restore them, or remove them permanently.</span>
           <button id="btnEmptyTrash" class="btn-secondary" type="button">Empty Recently Deleted</button>
         </div>
-        <div id="remindersList" class="reminders-list">
-          <!-- Dynamically populated -->
-        </div>
+        <div id="remindersList" class="reminders-list" role="list"></div>
 
-        <!-- Empty state placeholder -->
         <div id="emptyState" class="empty-state">
           <div class="empty-icon-wrapper">
-            <img src="assets/icon.png" alt="Reminder Icon" class="empty-icon" />
+            <img src="assets/icon.png" alt="" class="empty-icon" />
           </div>
-          <h3>No Reminders Found</h3>
-          <p>Press <kbd>F12</kbd> anywhere on your computer to instantly log an item or task.</p>
+          <h3 id="emptyTitle">No Reminders Found</h3>
+          <p id="emptyText">Press <kbd class="hotkey-label">F12</kbd> anywhere on your computer to instantly log an item or task.</p>
           <button id="btnEmptyAdd" class="btn-accent-sm" type="button">Create First Reminder</button>
         </div>
+      </section>
+
+      <!-- Calendar view -->
+      <section class="calendar-container hidden" id="calendarView">
+        <div class="calendar-main">
+          <div class="cal-head">
+            <button id="calPrev" class="btn-tool" type="button" aria-label="Previous month" title="Previous month"><span data-icon="left"></span></button>
+            <h2 id="calTitle" class="cal-title">Month</h2>
+            <button id="calNext" class="btn-tool" type="button" aria-label="Next month" title="Next month"><span data-icon="right"></span></button>
+            <button id="calToday" class="btn-tool" type="button">Today</button>
+          </div>
+          <div class="cal-weekdays" id="calWeekdays"></div>
+          <div class="cal-grid" id="calGrid" role="grid" aria-label="Month calendar"></div>
+          <p class="cal-legend">
+            <span class="legend-item"><span data-icon="check"></span> done that day</span>
+            <span class="legend-item"><span data-icon="note"></span> note or daily note</span>
+          </p>
+        </div>
+        <aside class="calendar-day" id="calDay" aria-live="polite"></aside>
       </section>
     </main>
 
     <!-- Status Bar -->
     <footer class="app-footer">
-      <div class="status-left">
-        <span class="status-indicator online"></span>
-        <span id="statusText">Kartavirya background listener active (F12)</span>
-      </div>
-      <div class="status-center">
-        <label class="tray-toggle-label" title="When checked, clicking the window minimize button (_) will hide Kartavirya directly into the system tray instead of staying on the taskbar.">
-          <input type="checkbox" id="chkMinimizeToTray" />
-          <span>Minimize button sends to Tray</span>
-        </label>
-      </div>
-      <div class="status-right">
-        <span id="statusClock">--:--</span>
-      </div>
+      <div class="status-left">Developed by: Vidyasagar Academy</div>
+      <div class="status-right">Version <span id="statusVersion">…</span></div>
     </footer>
   </div>
 
@@ -124,44 +145,45 @@
     <button id="btnToastAction" class="toast-action hidden" type="button">Undo</button>
   </div>
 
-  <!-- Modal: Edit Reminder -->
+  <!-- Modal: Edit -->
   <div id="editOverlay" class="modal-overlay hidden">
-    <div class="modal-dialog edit-dialog">
+    <div class="modal-dialog edit-dialog" role="dialog" aria-modal="true" aria-labelledby="editTitle">
       <div class="modal-header">
-        <h2>Edit Reminder</h2>
-        <button id="btnCloseEdit" class="modal-close" type="button" title="Close (Esc)">×</button>
+        <h2 id="editTitle">Edit Reminder</h2>
+        <button id="btnCloseEdit" class="modal-close" type="button" title="Close (Esc)" aria-label="Close"><span data-icon="x"></span></button>
       </div>
       <div class="modal-body edit-body">
-        <label class="section-label" for="editText" style="margin-bottom: 6px; display: block;">Task or Misplaced Item Note:</label>
-        <textarea id="editText" rows="3" placeholder="Enter updated note or additional details..."></textarea>
-        
-        <div class="frequency-section" style="margin-top: 14px;">
-          <label class="section-label">Remind Schedule:</label>
+        <div class="edit-row">
+          <span class="section-label">Type:</span>
+          <div class="segmented" id="editKindSwitch" role="group" aria-label="Item type">
+            <button type="button" data-kind="reminder" class="active"><span data-icon="bell"></span> Reminder</button>
+            <button type="button" data-kind="note"><span data-icon="note"></span> Note only</button>
+          </div>
+        </div>
+
+        <label class="section-label" for="editText" style="display:block;margin:12px 0 6px;">Task, misplaced item or note:</label>
+        <textarea id="editText" rows="3" maxlength="5000" placeholder="Enter updated note or additional details..."></textarea>
+
+        <div class="frequency-section" id="editScheduleSection" style="margin-top: 14px;">
+          <span class="section-label">Remind Schedule:</span>
           <div class="frequency-grid" id="editFreqButtons">
-            <button type="button" class="freq-btn active" data-freq="hourly" title="Shortcut: Alt+1">
-              <span class="btn-num">1</span> Every Hour
-            </button>
-            <button type="button" class="freq-btn" data-freq="5min" title="Shortcut: Alt+2">
-              <span class="btn-num">2</span> In 5 Mins
-            </button>
-            <button type="button" class="freq-btn" data-freq="today_evening" title="Shortcut: Alt+3">
-              <span class="btn-num">3</span> Today Evening
-            </button>
-            <button type="button" class="freq-btn" data-freq="daily" title="Shortcut: Alt+4">
-              <span class="btn-num">4</span> Daily
-            </button>
-            <button type="button" class="freq-btn" data-freq="weekly" title="Shortcut: Alt+5">
-              <span class="btn-num">5</span> Weekly
-            </button>
-            <button type="button" class="freq-btn" data-freq="custom" title="Shortcut: Alt+6">
-              <span class="btn-num">6</span> Custom Date/Time
-            </button>
+            <button type="button" class="freq-btn active" data-freq="hourly" title="Shortcut: Alt+1"><span class="btn-num">1</span> Every Hour</button>
+            <button type="button" class="freq-btn" data-freq="5min" title="Shortcut: Alt+2"><span class="btn-num">2</span> In 5 Mins</button>
+            <button type="button" class="freq-btn" data-freq="today_evening" title="Shortcut: Alt+3"><span class="btn-num">3</span> Today Evening</button>
+            <button type="button" class="freq-btn" data-freq="daily" title="Shortcut: Alt+4"><span class="btn-num">4</span> Daily</button>
+            <button type="button" class="freq-btn" data-freq="weekly" title="Shortcut: Alt+5"><span class="btn-num">5</span> Weekly</button>
+            <button type="button" class="freq-btn" data-freq="custom" title="Shortcut: Alt+6"><span class="btn-num">6</span> Custom Date/Time</button>
           </div>
         </div>
 
         <div id="editCustomPicker" class="custom-time-row hidden" style="margin-top: 10px;">
           <label for="editCustomDatetime">Alert Time:</label>
           <input type="datetime-local" id="editCustomDatetime" />
+        </div>
+
+        <div class="edit-row" style="margin-top: 14px;" id="editCategoryRow">
+          <span class="section-label">Category:</span>
+          <div class="cat-pick" id="editCategoryPick"></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -171,12 +193,123 @@
     </div>
   </div>
 
+  <!-- Modal: Settings -->
+  <div id="settingsOverlay" class="modal-overlay hidden">
+    <div class="modal-dialog settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="modal-header">
+        <h2 id="settingsTitle">Settings</h2>
+        <button id="btnCloseSettings" class="modal-close" type="button" title="Close (Esc)" aria-label="Close"><span data-icon="x"></span></button>
+      </div>
+      <div class="modal-body settings-body">
+        <section class="set-section">
+          <h3>Quick Capture</h3>
+          <div class="set-row">
+            <label for="setHotkey">Shortcut</label>
+            <div class="set-control">
+              <input type="text" id="setHotkey" readonly value="F12" title="Click here, then press the new shortcut" />
+              <button type="button" id="btnHotkeyReset" class="btn-secondary">Reset to F12</button>
+            </div>
+          </div>
+          <p class="set-hint" id="hotkeyHint">Click the box and press the keys you want, for example Ctrl+Shift+K.</p>
+        </section>
+
+        <section class="set-section">
+          <h3>Times</h3>
+          <div class="set-row">
+            <label for="setEvening">"Today Evening" time</label>
+            <div class="set-control"><input type="time" id="setEvening" /></div>
+          </div>
+          <div class="set-row">
+            <label for="setDaily">"Daily", "Weekly" and "Tomorrow" time</label>
+            <div class="set-control"><input type="time" id="setDaily" /></div>
+          </div>
+          <div class="set-row">
+            <label for="setSnooze">Snooze length (minutes)</label>
+            <div class="set-control"><input type="number" id="setSnooze" min="1" max="720" step="1" /></div>
+          </div>
+        </section>
+
+        <section class="set-section">
+          <h3>Windows</h3>
+          <label class="set-check"><input type="checkbox" id="setStartup" /> Start Kartavirya with Windows (in the system tray)</label>
+          <label class="set-check"><input type="checkbox" id="setTray" /> Minimize button sends Kartavirya to the system tray</label>
+          <div class="set-row">
+            <label for="setTheme">Appearance</label>
+            <div class="set-control">
+              <select id="setTheme">
+                <option value="system">Follow Windows (light / dark)</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="set-section">
+          <h3>Alert sound</h3>
+          <div class="set-row">
+            <label for="setSound">Sound</label>
+            <div class="set-control">
+              <select id="setSound"></select>
+              <button type="button" id="btnTestSound" class="btn-secondary"><span data-icon="play"></span> Test</button>
+            </div>
+          </div>
+          <div class="set-row">
+            <label for="setVolume">Volume</label>
+            <div class="set-control">
+              <input type="range" id="setVolume" min="0" max="100" step="5" />
+              <span id="volumeValue" class="volume-value">70%</span>
+            </div>
+          </div>
+          <p class="set-hint">"Windows sound" uses the system volume.</p>
+        </section>
+
+        <section class="set-section">
+          <h3>Categories</h3>
+          <div id="catList" class="cat-list"></div>
+          <button type="button" id="btnAddCategory" class="btn-secondary"><span data-icon="plus"></span> Add category</button>
+          <p class="set-hint">Removing a category never removes your reminders; they just show no category.</p>
+        </section>
+
+        <section class="set-section">
+          <h3>Backup</h3>
+          <div class="set-buttons">
+            <button type="button" id="btnExport" class="btn-secondary"><span data-icon="download"></span> Export…</button>
+            <button type="button" id="btnImport" class="btn-secondary"><span data-icon="upload"></span> Import…</button>
+          </div>
+          <p class="set-hint">Export saves all reminders, notes and categories to one file. Import shows a preview first and only adds what is missing; nothing is overwritten.</p>
+        </section>
+      </div>
+      <div class="modal-footer">
+        <button id="btnCancelSettings" class="btn-secondary" type="button">Cancel (Esc)</button>
+        <button id="btnSaveSettings" class="btn-primary" type="button">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Missed reminders summary -->
+  <div id="missedOverlay" class="modal-overlay hidden">
+    <div class="modal-dialog missed-dialog" role="dialog" aria-modal="true" aria-labelledby="missedTitle">
+      <div class="modal-header">
+        <h2 id="missedTitle">Missed reminders</h2>
+        <button id="btnCloseMissed" class="modal-close" type="button" title="Close (Esc)" aria-label="Close"><span data-icon="x"></span></button>
+      </div>
+      <div class="modal-body">
+        <p id="missedIntro" class="missed-intro"></p>
+        <div id="missedList" class="missed-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnOkMissed" class="btn-primary" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: About Dialog -->
   <div id="aboutOverlay" class="modal-overlay hidden">
-    <div class="modal-dialog about-dialog">
+    <div class="modal-dialog about-dialog" role="dialog" aria-modal="true" aria-labelledby="aboutTitleH">
       <div class="modal-header">
-        <h2>About Kartavirya</h2>
-        <button id="btnCloseAbout" class="modal-close" type="button" title="Close (Esc)">×</button>
+        <h2 id="aboutTitleH">About Kartavirya</h2>
+        <button id="btnCloseAbout" class="modal-close" type="button" title="Close (Esc)" aria-label="Close"><span data-icon="x"></span></button>
       </div>
       <div class="modal-body about-body">
         <div class="about-logos">
@@ -219,35 +352,21 @@
 
   <!-- Modal: Help Window -->
   <div id="helpOverlay" class="modal-overlay hidden">
-    <div class="modal-dialog help-dialog">
+    <div class="modal-dialog help-dialog" role="dialog" aria-modal="true" aria-labelledby="helpTitleH">
       <div class="modal-header">
         <div class="help-header-title">
-          <h2>Kartavirya Help & Documentation</h2>
+          <h2 id="helpTitleH">Kartavirya Help & Documentation</h2>
         </div>
-        <button id="btnCloseHelp" class="modal-close" type="button" title="Close (Esc)">×</button>
+        <button id="btnCloseHelp" class="modal-close" type="button" title="Close (Esc)" aria-label="Close"><span data-icon="x"></span></button>
       </div>
-      
-      <!-- Top search bar per Rule 12 -->
+
       <div class="help-search-bar">
-        <input type="text" id="helpSearchInput" placeholder="Search help topics, shortcuts, features..." />
+        <input type="text" id="helpSearchInput" placeholder="Search help topics, shortcuts, features..." aria-label="Search help" />
       </div>
 
       <div class="help-layout">
-        <!-- Left Pane: Categorized Topic Index -->
-        <nav class="help-nav" id="helpNav">
-          <button class="help-nav-item active" data-topic="intro">1. Introduction & Legend</button>
-          <button class="help-nav-item" data-topic="quick_capture">2. Quick Capture (F12)</button>
-          <button class="help-nav-item" data-topic="keyboard">3. Keyboard Shortcuts</button>
-          <button class="help-nav-item" data-topic="misplaced">4. Tracking Misplaced Items</button>
-          <button class="help-nav-item" data-topic="schedules">5. Frequencies & Alert Engine</button>
-          <button class="help-nav-item" data-topic="tray">6. System Tray & Minimizing</button>
-          <button class="help-nav-item" data-topic="version_history">7. Version History</button>
-        </nav>
-
-        <!-- Right Pane: Topic Content & Version History -->
-        <div class="help-content" id="helpContentPane">
-          <!-- Dynamic topic loaded here -->
-        </div>
+        <nav class="help-nav" id="helpNav"></nav>
+        <div class="help-content" id="helpContentPane"></div>
       </div>
 
       <div class="modal-footer">

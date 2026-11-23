@@ -1,0 +1,438 @@
+/* Shared design tokens and components for all Kartavirya windows.
+   Light is the default; dark follows Windows (or the user's choice). */
+:root {
+  --bg-app: #f0f7ff;
+  --bg-card: #ffffff;
+  --bg-subtle: #f8fafc;
+  --bg-hover: #f1f5f9;
+  --bg-soft: #eff6ff;
+  --bg-chip: #e0f2fe;
+  --border-light: #bfdbfe;
+  --border-card: #e2e8f0;
+  --border-input: #cbd5e1;
+  --border-focus: #2563eb;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-chip: #0369a1;
+  --accent: #1d4ed8;
+  --accent-solid: #1d4ed8;
+  --accent-hover: #1e40af;
+  --accent-sky: #0284c7;
+  --on-accent: #ffffff;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --danger-border: #fca5a5;
+  --success: #16a34a;
+  --warning: #b45309;
+  --warning-bg: #fffbeb;
+  --warning-border: #fcd34d;
+  --kbd-bg: #ffffff;
+  --overlay: rgba(15, 23, 42, 0.45);
+  --toast-bg: #1e293b;
+  --shadow-card: 0 2px 6px rgba(37, 99, 235, 0.08);
+  --shadow-pop: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.3);
+  --font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-app: #0b1220;
+    --bg-card: #111a2e;
+    --bg-subtle: #0f1729;
+    --bg-hover: #1a2540;
+    --bg-soft: #14223f;
+    --bg-chip: #12304d;
+    --border-light: #25407a;
+    --border-card: #22304d;
+    --border-input: #3a4a6b;
+    --border-focus: #60a5fa;
+    --text-main: #e5edf9;
+    --text-muted: #9aa9c2;
+    --text-chip: #7dd3fc;
+    --accent: #93c5fd;
+    --accent-solid: #2563eb;
+    --accent-hover: #3b82f6;
+    --accent-sky: #38bdf8;
+    --on-accent: #ffffff;
+    --danger: #f87171;
+    --danger-bg: #3b1519;
+    --danger-border: #7f1d1d;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --warning-bg: #2a2110;
+    --warning-border: #6b4e0b;
+    --kbd-bg: #1a2540;
+    --overlay: rgba(0, 0, 0, 0.6);
+    --toast-bg: #334155;
+    --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.35);
+    --shadow-pop: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+    --focus-ring: 0 0 0 3px rgba(96, 165, 250, 0.4);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg-app: #0b1220;
+  --bg-card: #111a2e;
+  --bg-subtle: #0f1729;
+  --bg-hover: #1a2540;
+  --bg-soft: #14223f;
+  --bg-chip: #12304d;
+  --border-light: #25407a;
+  --border-card: #22304d;
+  --border-input: #3a4a6b;
+  --border-focus: #60a5fa;
+  --text-main: #e5edf9;
+  --text-muted: #9aa9c2;
+  --text-chip: #7dd3fc;
+  --accent: #93c5fd;
+  --accent-solid: #2563eb;
+  --accent-hover: #3b82f6;
+  --accent-sky: #38bdf8;
+  --on-accent: #ffffff;
+  --danger: #f87171;
+  --danger-bg: #3b1519;
+  --danger-border: #7f1d1d;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --warning-bg: #2a2110;
+  --warning-border: #6b4e0b;
+  --kbd-bg: #1a2540;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --toast-bg: #334155;
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+  --focus-ring: 0 0 0 3px rgba(96, 165, 250, 0.4);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+  user-select: none;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  overflow: hidden;
+}
+
+.hidden {
+  display: none !important;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 1px;
+}
+
+/* ---- Icons (inline SVG, vector, always sharp) ---- */
+.ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  line-height: 0;
+}
+
+.ico svg {
+  width: 1em;
+  height: 1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---- Keys ---- */
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+}
+
+/* ---- Buttons ---- */
+button.btn-primary {
+  background: var(--accent-solid);
+  color: var(--on-accent);
+  border: none;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+
+button.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+button.btn-secondary {
+  background: var(--bg-card);
+  border: 1px solid var(--border-input);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+button.btn-secondary:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Schedule buttons (Quick Capture and Edit) ---- */
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.frequency-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.frequency-grid {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.freq-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-input);
+  color: var(--text-main);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.freq-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+.freq-btn.active {
+  background: var(--bg-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.freq-btn:disabled {
+  opacity: 0.45;
+}
+
+.btn-num {
+  font-size: 9.5px;
+  background: var(--border-card);
+  color: var(--text-muted);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.freq-btn.active .btn-num {
+  background: var(--accent-solid);
+  color: var(--on-accent);
+}
+
+.custom-time-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+input[type="datetime-local"],
+input[type="time"],
+input[type="number"],
+select {
+  padding: 4px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-main);
+  background: var(--bg-card);
+  outline: none;
+  user-select: text;
+}
+
+input[type="datetime-local"]:focus,
+input[type="time"]:focus,
+input[type="number"]:focus,
+select:focus {
+  border-color: var(--accent);
+}
+
+/* ---- Segmented control (Reminder | Note, List | Calendar) ---- */
+.segmented {
+  display: inline-flex;
+  background: var(--border-card);
+  padding: 2px;
+  border-radius: 8px;
+  gap: 2px;
+}
+
+.segmented button {
+  background: transparent;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.segmented button.active {
+  background: var(--bg-card);
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* ---- Categories ---- */
+.cat-chip {
+  --c: #2563eb;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--c) 72%, var(--text-main));
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+  white-space: nowrap;
+}
+
+.cat-chip .ico {
+  font-size: 13px;
+  color: var(--c);
+}
+
+.cat-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.cat-pick button {
+  --c: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px 2px 6px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-input);
+  color: var(--text-muted);
+}
+
+.cat-pick button .ico {
+  font-size: 14px;
+  color: var(--c);
+}
+
+.cat-pick button:hover {
+  background: var(--bg-hover);
+}
+
+.cat-pick button.active {
+  color: color-mix(in srgb, var(--c) 72%, var(--text-main));
+  background: color-mix(in srgb, var(--c) 18%, transparent);
+  border-color: var(--c);
+}
+
+/* ---- Toast ---- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 48px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--toast-bg);
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  z-index: 2000;
+  max-width: 90vw;
+}
+
+.toast-action {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toast-action:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+@media (forced-colors: active) {
+  .freq-btn.active,
+  .cat-pick button.active,
+  .segmented button.active {
+    outline: 2px solid Highlight;
+  }
+}

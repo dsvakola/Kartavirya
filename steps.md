@@ -94,3 +94,19 @@
 - Correct Alt+1..6 shortcut labels; F1 opens Help.
 - Strict CSP, least-privilege capability (core only), no `unwrap()` in command code, template leftovers removed, README rewritten, `pnpm install` added to build.bat.
 - Core logic split into `schedule.rs` and `storage.rs` with 20 `cargo test` tests.
+
+---
+
+## Version 1.2.0 (New Additions & Improvements)
+- Fixed the Quick Capture box: the window had a fixed height, so wrapped content hid the Discard and Save buttons. Layout is now header / scrolling middle / footer, and the window resizes to fit (`fit_popup`). Alert window got the same layout.
+- Settings window (settings.json): custom hotkey, evening/daily times, snooze length, start with Windows, theme, alert sound and volume, categories.
+- Natural-language quick capture (`nlp.rs`), notes-only items, categories (colour + SVG icon), daily notes (`daily-notes.json`), month calendar, missed-reminders summary, grouped list, keyboard navigation, snooze choices, export/import with preview.
+- Dark mode following Windows; all emoji replaced by inline SVG icons.
+- Minimize goes to tray by default; status bar shows "Developed by" and the version.
+- Rust: `settings.rs`, `nlp.rs`, `backup.rs` added; `storage.rs` made generic. 46 `cargo test` tests; fmt and clippy clean.
+
+---
+
+## Version 1.2.1 (Small Improvements)
+- Removed the startup banner about F12 already being registered (e.g. when a second copy starts). If the saved shortcut is busy at startup, F12 is tried quietly. Errors show only when the shortcut is changed in Settings.
+- `build.bat` names the Release files with the version from `tauri.conf.json`: `Kartavirya-<version>-setup.exe` and `Kartavirya-<version>-portable.exe`.

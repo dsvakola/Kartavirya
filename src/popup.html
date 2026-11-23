@@ -4,51 +4,52 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kartavirya Quick Entry</title>
+  <link rel="stylesheet" href="base.css" />
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body class="popup-body">
-  <div class="popup-container">
-    <header class="popup-header">
+  <div class="popup-container" id="popupContainer">
+    <header class="popup-header" id="popupHeader">
       <div class="header-left">
-        <img src="assets/icon.png" alt="Kartavirya" class="popup-icon" />
+        <img src="assets/icon.png" alt="" class="popup-icon" />
         <span class="popup-title">Kartavirya – Quick Capture</span>
       </div>
-      <div class="header-right">
-        <span id="liveTimestamp" class="timestamp-pill">--:--</span>
-      </div>
+      <span id="liveTimestamp" class="timestamp-pill">--:--</span>
     </header>
 
-    <main class="popup-content">
-      <div class="input-group">
-        <textarea 
-          id="taskInput" 
-          rows="2" 
-          placeholder="What do you want to remember? (e.g., Car keys on table, Call client at 4 PM...)"
-          autofocus
-        ></textarea>
+    <main class="popup-content" id="popupContent">
+      <textarea
+        id="taskInput"
+        rows="2"
+        maxlength="5000"
+        placeholder="What do you want to remember? e.g. Car keys on table · Call client at 4 PM · Pay fees tomorrow"
+        aria-label="What do you want to remember?"
+        autofocus
+      ></textarea>
+
+      <div id="detectedHint" class="detected-hint hidden" role="status">
+        <span data-icon="clock"></span>
+        <span id="detectedText"></span>
+        <button id="btnIgnoreDetected" type="button" class="hint-x" title="Ignore the detected time" aria-label="Ignore the detected time"><span data-icon="x"></span></button>
       </div>
 
-      <div class="frequency-section">
-        <label class="section-label">Remind Me:</label>
+      <div class="row">
+        <span class="section-label">Type:</span>
+        <div class="segmented" id="kindSwitch" role="group" aria-label="Item type">
+          <button type="button" data-kind="reminder" class="active" title="Reminder – alerts you at the chosen time"><span data-icon="bell"></span> Reminder</button>
+          <button type="button" data-kind="note" title="Note only – saved and searchable, never alerts (Alt+N)"><span data-icon="note"></span> Note only <kbd>Alt+N</kbd></button>
+        </div>
+      </div>
+
+      <div class="frequency-section" id="scheduleSection">
+        <span class="section-label">Remind Me:</span>
         <div class="frequency-grid" id="freqButtons">
-          <button type="button" class="freq-btn active" data-freq="hourly" title="Shortcut: Alt+1">
-            <span class="btn-num">1</span> Every Hour
-          </button>
-          <button type="button" class="freq-btn" data-freq="5min" title="Shortcut: Alt+2">
-            <span class="btn-num">2</span> In 5 Mins
-          </button>
-          <button type="button" class="freq-btn" data-freq="today_evening" title="Shortcut: Alt+3">
-            <span class="btn-num">3</span> Today Evening
-          </button>
-          <button type="button" class="freq-btn" data-freq="daily" title="Shortcut: Alt+4">
-            <span class="btn-num">4</span> Daily
-          </button>
-          <button type="button" class="freq-btn" data-freq="weekly" title="Shortcut: Alt+5">
-            <span class="btn-num">5</span> Weekly
-          </button>
-          <button type="button" class="freq-btn" data-freq="custom" title="Shortcut: Alt+6">
-            <span class="btn-num">6</span> Custom Date/Time
-          </button>
+          <button type="button" class="freq-btn active" data-freq="hourly" title="Shortcut: Alt+1"><span class="btn-num">1</span> Every Hour</button>
+          <button type="button" class="freq-btn" data-freq="5min" title="Shortcut: Alt+2"><span class="btn-num">2</span> In 5 Mins</button>
+          <button type="button" class="freq-btn" data-freq="today_evening" title="Shortcut: Alt+3"><span class="btn-num">3</span> Today Evening</button>
+          <button type="button" class="freq-btn" data-freq="daily" title="Shortcut: Alt+4"><span class="btn-num">4</span> Daily</button>
+          <button type="button" class="freq-btn" data-freq="weekly" title="Shortcut: Alt+5"><span class="btn-num">5</span> Weekly</button>
+          <button type="button" class="freq-btn" data-freq="custom" title="Shortcut: Alt+6"><span class="btn-num">6</span> Custom Date/Time</button>
         </div>
       </div>
 
@@ -56,11 +57,18 @@
         <label for="customDatetime">Choose alert time:</label>
         <input type="datetime-local" id="customDatetime" />
       </div>
+
+      <div class="row" id="categoryRow">
+        <span class="section-label">Category:</span>
+        <div class="cat-pick" id="categoryPick"></div>
+      </div>
+
+      <div id="popupError" class="popup-error hidden" role="alert"></div>
     </main>
 
-    <footer class="popup-footer">
+    <footer class="popup-footer" id="popupFooter">
       <div class="shortcut-hints">
-        <span class="hint-badge"><kbd>Enter</kbd> Save & Close</span>
+        <span class="hint-badge"><kbd>Enter</kbd> Save</span>
         <span class="hint-badge"><kbd>Esc</kbd> Discard</span>
         <span class="hint-badge"><kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>6</kbd> Schedule</span>
       </div>

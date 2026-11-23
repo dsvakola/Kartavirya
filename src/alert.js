@@ -1,60 +1,33 @@
 // Floating alert window for Kartavirya.
 // Rust keeps the queue of due reminders; this window shows the first one.
-const invoke = window.__TAURI__ ? window.__TAURI__.core.invoke : async () => [];
-const listen = window.__TAURI__ ? window.__TAURI__.event.listen : () => {};
+import { invoke, listen, tauri, bootSettings, categoryById, categoryChip, formatShort, FREQ_LABELS } from "./common.js";
+import { hydrateIcons, icon } from "./icons.js";
+import { playSound } from "./sound.js";
 
-const alertTaskText = document.getElementById("alertTaskText");
-const alertScheduleType = document.getElementById("alertScheduleType");
-const alertAddedDate = document.getElementById("alertAddedDate");
-const alertTimestamp = document.getElementById("alertTimestamp");
-const alertQueueInfo = document.getElementById("alertQueueInfo");
+const $ = (id) => document.getElementById(id);
+const alertTaskText = $("alertTaskText");
+const alertScheduleType = $("alertScheduleType");
+const alertCategory = $("alertCategory");
+const alertAddedDate = $("alertAddedDate");
+const alertTimestamp = $("alertTimestamp");
+const alertQueueInfo = $("alertQueueInfo");
+const snoozeLabel = $("snoozeLabel");
+const snoozeMore = $("snoozeMore");
 
-const btnDismiss = document.getElementById("btnDismiss");
-const btnSnooze10 = document.getElementById("btnSnooze10");
-const btnComplete = document.getElementById("btnComplete");
-
-let currentReminderId = null;
+let settings = null;
+let currentReminder = null;
 let busy = false;
 
-const freqLabels = {
-  "5min": "In 5 Mins",
-  hourly: "Hourly",
-  today_evening: "Today Evening",
-  daily: "Daily",
-  weekly: "Weekly",
-  custom: "Custom Date/Time"
-};
+hydrateIcons();
 
-function playAlarmTone() {
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    if (ctx.state === "suspended") ctx.resume();
-    const now = ctx.currentTime;
-    const notes = [587.33, 739.99, 880.0];
-    notes.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, now + idx * 0.14);
-      gain.gain.setValueAtTime(0.35, now + idx * 0.14);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.14 + 0.55);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + idx * 0.14);
-      osc.stop(now + idx * 0.14 + 0.6);
-    });
-  } catch (err) {
-    console.warn("Audio tone error:", err);
-  }
+function minutesText(m) {
+  if (m % 1440 === 0) return `${m / 1440}d`;
+  if (m % 60 === 0) return `${m / 60}h`;
+  return `${m}m`;
 }
 
-function formatTime(isoStr) {
-  if (!isoStr) return "";
-  const d = new Date(isoStr);
-  if (isNaN(d.getTime())) return isoStr;
-  return d.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true });
+function drawSnoozeLabel() {
+  if (settings) snoozeLabel.textContent = `Snooze ${minutesText(settings.snoozeMinutes)}`;
 }
 
 async function refreshQueue() {
@@ -65,40 +38,49 @@ async function refreshQueue() {
     console.error(err);
   }
   if (!Array.isArray(queue) || queue.length === 0) {
-    currentReminderId = null;
+    currentReminder = null;
     return;
   }
   const reminder = queue[0];
-  const isNew = reminder.id !== currentReminderId;
-  currentReminderId = reminder.id;
+  const isNew = !currentReminder || reminder.id !== currentReminder.id;
+  currentReminder = reminder;
 
   alertTaskText.textContent = reminder.text;
-  alertScheduleType.textContent = "🔄 " + (freqLabels[reminder.remind_type] || reminder.remind_type);
-  alertAddedDate.textContent = "Added: " + formatTime(reminder.created_at);
+  alertScheduleType.innerHTML = `${icon("repeat")}${FREQ_LABELS[reminder.remind_type] || reminder.remind_type}`;
+  alertCategory.innerHTML = categoryChip(categoryById(settings, reminder.category));
+  alertAddedDate.textContent = "Added: " + formatShort(reminder.created_at);
   alertTimestamp.textContent = "Due Now";
   alertQueueInfo.textContent = queue.length > 1 ? `1 of ${queue.length} reminders` : "";
+  snoozeMore.value = "";
 
-  if (isNew) playAlarmTone();
+  if (isNew && settings) playSound(settings.sound, settings.volume);
 }
 
-async function act(action) {
-  if (!currentReminderId || busy) return;
+async function act(action, minutes) {
+  if (!currentReminder || busy) return;
   busy = true;
   try {
-    await invoke("alert_action", { id: currentReminderId, action });
+    await invoke("alert_action", { id: currentReminder.id, action, minutes: minutes ?? null });
   } catch (err) {
     console.error(err);
   }
-  currentReminderId = null;
+  currentReminder = null;
   busy = false;
   await refreshQueue();
 }
 
-btnComplete.addEventListener("click", () => act("complete"));
-btnSnooze10.addEventListener("click", () => act("snooze"));
-btnDismiss.addEventListener("click", () => act("dismiss"));
+$("btnComplete").addEventListener("click", () => act("complete"));
+$("btnSnooze").addEventListener("click", () => act("snooze"));
+$("btnDismiss").addEventListener("click", () => act("dismiss"));
+snoozeMore.addEventListener("change", () => {
+  const v = snoozeMore.value;
+  if (!v) return;
+  if (v === "tomorrow") act("snooze_tomorrow");
+  else act("snooze", Number(v));
+});
 
 window.addEventListener("keydown", (e) => {
+  if (e.target === snoozeMore) return;
   if (e.key === "Escape") {
     e.preventDefault();
     act("dismiss");
@@ -108,7 +90,13 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-if (window.__TAURI__) {
-  listen("alerts-changed", () => refreshQueue());
+async function start() {
+  settings = await bootSettings((s) => {
+    settings = s;
+    drawSnoozeLabel();
+  });
+  drawSnoozeLabel();
+  if (tauri) listen("alerts-changed", () => refreshQueue());
+  await refreshQueue();
 }
-refreshQueue();
+start();

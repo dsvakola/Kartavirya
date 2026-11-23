@@ -4,14 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kartavirya Reminder Alert</title>
+  <link rel="stylesheet" href="base.css" />
   <link rel="stylesheet" href="alert.css" />
 </head>
 <body class="alert-body-root">
-  <div class="alert-container">
+  <div class="alert-container" role="alertdialog" aria-labelledby="alertTitle">
     <div class="alert-header">
       <div class="header-title">
-        <span class="bell-icon-pulse">🔔</span>
-        <h2>Kartavirya Reminder!</h2>
+        <span class="bell-icon-pulse" data-icon="bell"></span>
+        <h2 id="alertTitle">Kartavirya Reminder!</h2>
       </div>
       <span id="alertTimestamp" class="alert-time-pill">Due Now</span>
     </div>
@@ -21,21 +22,35 @@
         <p id="alertTaskText">Your scheduled reminder is due!</p>
       </div>
       <div class="meta-row">
-        <span id="alertScheduleType" class="meta-badge">🔄 Hourly</span>
-        <span id="alertAddedDate" class="meta-date">Added: --</span>
-        <span id="alertQueueInfo" class="meta-date"></span>
+        <span class="meta-left">
+          <span id="alertCategory"></span>
+          <span id="alertScheduleType" class="meta-badge"></span>
+        </span>
+        <span class="meta-right">
+          <span id="alertAddedDate" class="meta-date">Added: --</span>
+          <span id="alertQueueInfo" class="meta-date queue-info"></span>
+        </span>
       </div>
     </div>
 
     <div class="alert-actions">
-      <button id="btnDismiss" class="btn-action btn-dismiss" type="button" title="Dismiss Alert (Esc)">
+      <button id="btnDismiss" class="btn-secondary" type="button" title="Dismiss Alert (Esc)">
         Dismiss <kbd>Esc</kbd>
       </button>
-      <button id="btnSnooze10" class="btn-action btn-snooze" type="button" title="Snooze for 10 minutes">
-        Snooze 10m
-      </button>
-      <button id="btnComplete" class="btn-action btn-complete" type="button" title="Mark Done (Enter)">
-        Mark Done ✓ <kbd>Enter</kbd>
+      <div class="snooze-group">
+        <button id="btnSnooze" class="btn-secondary" type="button" title="Snooze for the default time"><span data-icon="moon"></span> <span id="snoozeLabel">Snooze 10m</span></button>
+        <select id="snoozeMore" aria-label="More snooze choices" title="More snooze choices">
+          <option value="">More…</option>
+          <option value="5">5 minutes</option>
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60">1 hour</option>
+          <option value="120">2 hours</option>
+          <option value="tomorrow">Tomorrow morning</option>
+        </select>
+      </div>
+      <button id="btnComplete" class="btn-primary" type="button" title="Mark Done (Enter)">
+        <span data-icon="check"></span> Mark Done <kbd>Enter</kbd>
       </button>
     </div>
   </div>

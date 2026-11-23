@@ -8,7 +8,21 @@ echo.
 set PROJECT_DIR=%~dp0
 cd /d "%PROJECT_DIR%"
 
+REM Read the version from tauri.conf.json (the single source of the version number)
+set APP_VERSION=
+for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "(Get-Content -Raw 'src-tauri\tauri.conf.json' | ConvertFrom-Json).version"`) do set APP_VERSION=%%v
+if "%APP_VERSION%"=="" (
+    echo [ERROR] Could not read the version from src-tauri\tauri.conf.json.
+    pause
+    exit /b 1
+)
+set SETUP_NAME=Kartavirya-%APP_VERSION%-setup.exe
+set PORTABLE_NAME=Kartavirya-%APP_VERSION%-portable.exe
+echo Version: %APP_VERSION%
+echo.
+
 echo [1/4] Closing any running instances and cleaning previous Release artifacts...
+taskkill /f /im Kartavirya-*.exe 2>nul
 taskkill /f /im portable.exe 2>nul
 taskkill /f /im setup.exe 2>nul
 taskkill /f /im kartavirya.exe 2>nul
@@ -38,8 +52,8 @@ echo [3/4] Packaging outputs into Release folder...
 
 REM 1. Copy portable standalone executable
 if exist "src-tauri\target\release\kartavirya.exe" (
-    copy /y "src-tauri\target\release\kartavirya.exe" "Release\portable.exe" >nul
-    echo   - Created: Release\portable.exe
+    copy /y "src-tauri\target\release\kartavirya.exe" "Release\%PORTABLE_NAME%" >nul
+    echo   - Created: Release\%PORTABLE_NAME%
 ) else (
     echo [ERROR] Could not find src-tauri\target\release\kartavirya.exe
     pause
@@ -49,8 +63,8 @@ if exist "src-tauri\target\release\kartavirya.exe" (
 REM 2. Copy NSIS setup installer (newest built installer)
 set SETUP_FOUND=0
 for /f "delims=" %%f in ('dir /b /a-d /o-d "src-tauri\target\release\bundle\nsis\*.exe" 2^>nul') do (
-    copy /y "src-tauri\target\release\bundle\nsis\%%f" "Release\setup.exe" >nul
-    echo   - Created: Release\setup.exe (from %%f)
+    copy /y "src-tauri\target\release\bundle\nsis\%%f" "Release\%SETUP_NAME%" >nul
+    echo   - Created: Release\%SETUP_NAME% (from %%f)
     set SETUP_FOUND=1
     goto :done_setup
 )
@@ -58,8 +72,8 @@ for /f "delims=" %%f in ('dir /b /a-d /o-d "src-tauri\target\release\bundle\nsis
 
 if "%SETUP_FOUND%"=="0" (
     for /r "src-tauri\target\release\bundle" %%f in (*setup*.exe *installer*.exe) do (
-        copy /y "%%f" "Release\setup.exe" >nul
-        echo   - Created: Release\setup.exe
+        copy /y "%%f" "Release\%SETUP_NAME%" >nul
+        echo   - Created: Release\%SETUP_NAME%
         set SETUP_FOUND=1
         goto :found_setup_fallback
     )
@@ -78,7 +92,7 @@ echo.
 echo ========================================================
 echo   Build Successful!
 echo   Release deliverables located in: %PROJECT_DIR%Release\
-echo     1. setup.exe    (Installer with Desktop Shortcut)
-echo     2. portable.exe (Standalone Portable Version)
+echo     1. %SETUP_NAME%    (Installer with Desktop Shortcut)
+echo     2. %PORTABLE_NAME% (Standalone Portable Version)
 echo ========================================================
 echo.

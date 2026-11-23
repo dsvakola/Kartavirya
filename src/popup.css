@@ -1,51 +1,18 @@
-:root {
-  --bg-primary: #f0f7ff;
-  --bg-card: #ffffff;
-  --bg-input: #ffffff;
-  --border-light: #bfdbfe;
-  --border-focus: #2563eb;
-  --text-main: #0f172a;
-  --text-muted: #475569;
-  --accent-blue: #1d4ed8;
-  --accent-sky: #0284c7;
-  --accent-hover: #1e40af;
-  --badge-bg: #e0f2fe;
-  --badge-text: #0369a1;
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: var(--font-family);
-  user-select: none;
-}
-
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background-color: var(--bg-primary);
-}
-
 .popup-body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 8px;
 }
 
+/* Header, scrolling middle, footer: the buttons in the footer can never be pushed out of view. */
 .popup-container {
   width: 100%;
   height: 100%;
-  background: var(--bg-primary);
+  background: var(--bg-app);
   border: 1.5px solid var(--border-light);
   border-radius: 12px;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   padding: 12px 16px;
-  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.15), 0 8px 10px -6px rgba(37, 99, 235, 0.1);
+  box-shadow: var(--shadow-card);
 }
 
 .popup-header {
@@ -53,7 +20,7 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 8px;
-  border-bottom: 1px solid #dbeafe;
+  border-bottom: 1px solid var(--border-card);
 }
 
 .header-left {
@@ -71,30 +38,33 @@ html, body {
 .popup-title {
   font-size: 13.5px;
   font-weight: 700;
-  color: var(--accent-blue);
+  color: var(--accent);
   letter-spacing: -0.2px;
 }
 
 .timestamp-pill {
   font-size: 11px;
   font-weight: 600;
-  color: var(--badge-text);
-  background: var(--badge-bg);
+  color: var(--text-chip);
+  background: var(--bg-chip);
   padding: 2px 8px;
   border-radius: 12px;
-  border: 1px solid #bae6fd;
 }
 
 .popup-content {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 10px;
+  gap: 9px;
+  padding: 10px 2px 8px;
+  overflow-y: auto;
+  min-height: 0;
 }
 
-.input-group {
-  width: 100%;
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 textarea#taskInput {
@@ -104,7 +74,7 @@ textarea#taskInput {
   line-height: 1.4;
   padding: 8px 10px;
   color: var(--text-main);
-  background: var(--bg-input);
+  background: var(--bg-card);
   border: 1.5px solid var(--border-light);
   border-radius: 8px;
   outline: none;
@@ -114,103 +84,63 @@ textarea#taskInput {
 
 textarea#taskInput:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  box-shadow: var(--focus-ring);
 }
 
-.frequency-section {
+.detected-hint {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.section-label {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.frequency-grid {
-  display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-chip);
+  background: var(--bg-chip);
+  border-radius: 6px;
+  padding: 4px 8px;
 }
 
-.freq-btn {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: var(--text-main);
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
+.detected-hint #detectedText {
+  flex: 1;
+}
+
+.hint-x {
+  background: none;
+  border: none;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease;
-}
-
-.freq-btn:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-}
-
-.freq-btn.active {
-  background: #eff6ff;
-  border-color: var(--accent-blue);
-  color: var(--accent-blue);
-  font-weight: 700;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2);
-}
-
-.btn-num {
-  font-size: 9.5px;
-  background: #e2e8f0;
-  color: #475569;
-  padding: 1px 4px;
-  border-radius: 4px;
-  font-weight: 700;
-}
-
-.freq-btn.active .btn-num {
-  background: #bfdbfe;
-  color: #1e40af;
-}
-
-.custom-time-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11.5px;
   color: var(--text-muted);
+  border-radius: 4px;
+  padding: 2px;
+  font-size: 13px;
 }
 
-.custom-time-row.hidden {
-  display: none;
+.hint-x:hover {
+  background: rgba(0, 0, 0, 0.1);
 }
 
-.custom-time-row input[type="datetime-local"] {
-  padding: 3px 6px;
-  border: 1px solid #cbd5e1;
+.popup-error {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
   border-radius: 6px;
-  font-size: 11.5px;
-  color: var(--text-main);
-  background: #ffffff;
-  outline: none;
+  padding: 5px 8px;
 }
 
 .popup-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 10px;
   padding-top: 8px;
-  border-top: 1px solid #dbeafe;
+  border-top: 1px solid var(--border-card);
 }
 
 .shortcut-hints {
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 4px 10px;
 }
 
 .hint-badge {
@@ -221,51 +151,12 @@ textarea#taskInput:focus {
   gap: 3px;
 }
 
-kbd {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  padding: 1px 4px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-main);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
-}
-
 .footer-actions {
   display: flex;
   gap: 8px;
+  margin-left: auto;
 }
 
-button.btn-secondary {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #cbd5e1;
-  padding: 5px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-button.btn-secondary:hover {
-  background: #e2e8f0;
-}
-
-button.btn-primary {
-  background: var(--accent-blue);
-  color: #ffffff;
-  border: none;
-  padding: 5px 14px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
-}
-
-button.btn-primary:hover {
-  background: var(--accent-hover);
+.popup-content > * {
+  flex: none;
 }
