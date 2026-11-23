@@ -85,6 +85,12 @@ For development: `pnpm install` then `pnpm tauri dev`.
 - **1.1.0** – Minimize-to-tray options, installer icon, alert window and sound.
 - **1.0.0** – Initial release.
 
+## Branches
+- `main` – project overview (this README) and licence.
+- `v1.2.1` – latest version with full source code.
+- `v1.1.1` – previous version: reliability fixes.
+- `v1.1.0` – earlier version: tray options and alert window.
+
 ## About
 Developed by: Prof. Dattaraj S. Vidyasagar & Prof. Yash D. Vidyasagar, for Vidyasagar Academy.
 Website: https://vsa.edu.in/software/ · Email: softinquiry@vsa.edu.in
