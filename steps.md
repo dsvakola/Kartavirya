@@ -79,3 +79,18 @@
   - Updated `build.bat` with reverse-date sorting (`dir /o-d`) and pre-build cleanup of `bundle\nsis\*.exe` to prevent stale version installer collisions.
   - Verified extracted icon MD5 checksum between `setup.exe` and `portable.exe` (`1BC2722F5DB2814C5038C9A225356666`) confirming 100% icon fidelity.
   - Freshly built `Release/` folder with exactly two deliverables: `setup.exe` and `portable.exe`.
+
+---
+
+## Version 1.1.1 (Reliability Fixes)
+- Safe storage: atomic save (temp file + rename), previous file kept as `reminders.bak.json`, a damaged file is moved to `reminders.corrupt-<date-time>.json` and the backup is loaded; a warning banner tells the user.
+- Safe delete: confirmation dialog, Undo toast, and a "Recently Deleted" filter with Restore, Delete Forever and Empty (each confirmed).
+- Floating alert window wired in Rust (alert queue, `get_alert_queue`, `alert_action`): Mark Done, Snooze 10m, Dismiss; Esc/Enter keys.
+- One-time reminders (In 5 Mins, Today Evening, Custom) alert once, then show "Overdue".
+- Hourly/daily/weekly next time counted from the scheduled slot; snooze keeps the schedule.
+- Editing only the text keeps the due time.
+- About reads the version from tauri.conf.json via Rust; links open through Rust (fixed privacy, website, e-mail only).
+- Single-instance plugin; popup/alert windows hide instead of closing on Alt+F4.
+- Correct Alt+1..6 shortcut labels; F1 opens Help.
+- Strict CSP, least-privilege capability (core only), no `unwrap()` in command code, template leftovers removed, README rewritten, `pnpm install` added to build.bat.
+- Core logic split into `schedule.rs` and `storage.rs` with 20 `cargo test` tests.

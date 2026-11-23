@@ -20,7 +20,13 @@ if exist "src-tauri\target\release\bundle\nsis" (
     del /f /q "src-tauri\target\release\bundle\nsis\*.exe" 2>nul
 )
 
-echo [2/4] Building Kartavirya (Release Mode)...
+echo [2/4] Installing dependencies and building Kartavirya (Release Mode)...
+call pnpm install
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] pnpm install failed with error code %ERRORLEVEL%.
+    pause
+    exit /b %ERRORLEVEL%
+)
 call pnpm tauri build --bundles nsis
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Tauri build failed with error code %ERRORLEVEL%.

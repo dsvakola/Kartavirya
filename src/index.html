@@ -48,6 +48,7 @@
           <button class="filter-btn active" data-filter="all">All (<span id="countAll">0</span>)</button>
           <button class="filter-btn" data-filter="active">Active (<span id="countActive">0</span>)</button>
           <button class="filter-btn" data-filter="completed">Completed (<span id="countCompleted">0</span>)</button>
+          <button class="filter-btn" data-filter="deleted" title="Deleted reminders can be restored from here">🗑 Recently Deleted (<span id="countDeleted">0</span>)</button>
         </div>
 
         <button id="btnNewReminder" class="btn-accent" type="button">
@@ -55,8 +56,18 @@
         </button>
       </section>
 
+      <!-- Warning shown when the reminders file had to be recovered -->
+      <div id="loadWarning" class="load-warning hidden" role="alert">
+        <span id="loadWarningText"></span>
+        <button id="btnCloseWarning" class="btn-clear" type="button" title="Close">×</button>
+      </div>
+
       <!-- Reminder Cards List -->
       <section class="reminders-container">
+        <div id="trashBar" class="trash-bar hidden">
+          <span>Reminders here are not alerted. Restore them, or remove them permanently.</span>
+          <button id="btnEmptyTrash" class="btn-secondary" type="button">Empty Recently Deleted</button>
+        </div>
         <div id="remindersList" class="reminders-list">
           <!-- Dynamically populated -->
         </div>
@@ -91,26 +102,26 @@
     </footer>
   </div>
 
-  <!-- In-App Catchy Alert Notification Modal -->
-  <div id="alertOverlay" class="modal-overlay hidden">
-    <div class="alert-modal">
-      <div class="alert-header">
-        <div class="alert-title-box">
-          <span class="alert-bell-anim">🔔</span>
-          <h3>Kartavirya Reminder!</h3>
-        </div>
-        <span id="alertTime" class="alert-time-badge">Just now</span>
+  <!-- Modal: Confirmation Dialog -->
+  <div id="confirmOverlay" class="modal-overlay hidden">
+    <div class="modal-dialog confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="modal-header">
+        <h2 id="confirmTitle">Please Confirm</h2>
       </div>
-      <div class="alert-body">
-        <p id="alertTaskText" class="alert-task-text">Your scheduled task is due now!</p>
-        <div id="alertCreatedInfo" class="alert-created-info">Logged on: --</div>
+      <div class="modal-body">
+        <p id="confirmMessage" class="confirm-message"></p>
       </div>
-      <div class="alert-footer">
-        <button id="btnAlertSnooze" class="btn-secondary" type="button">Snooze 10m</button>
-        <button id="btnAlertDismiss" class="btn-secondary" type="button">Dismiss</button>
-        <button id="btnAlertComplete" class="btn-primary" type="button">Mark Done ✓</button>
+      <div class="modal-footer">
+        <button id="btnConfirmCancel" class="btn-secondary" type="button">Cancel (Esc)</button>
+        <button id="btnConfirmOk" class="btn-primary" type="button">OK</button>
       </div>
     </div>
+  </div>
+
+  <!-- Toast with optional Undo -->
+  <div id="toast" class="toast hidden" role="status">
+    <span id="toastText"></span>
+    <button id="btnToastAction" class="toast-action hidden" type="button">Undo</button>
   </div>
 
   <!-- Modal: Edit Reminder -->
@@ -127,22 +138,22 @@
         <div class="frequency-section" style="margin-top: 14px;">
           <label class="section-label">Remind Schedule:</label>
           <div class="frequency-grid" id="editFreqButtons">
-            <button type="button" class="freq-btn active" data-freq="hourly" title="Shortcut: Press 1">
+            <button type="button" class="freq-btn active" data-freq="hourly" title="Shortcut: Alt+1">
               <span class="btn-num">1</span> Every Hour
             </button>
-            <button type="button" class="freq-btn" data-freq="5min" title="Shortcut: Press 2">
+            <button type="button" class="freq-btn" data-freq="5min" title="Shortcut: Alt+2">
               <span class="btn-num">2</span> In 5 Mins
             </button>
-            <button type="button" class="freq-btn" data-freq="today_evening" title="Shortcut: Press 3">
+            <button type="button" class="freq-btn" data-freq="today_evening" title="Shortcut: Alt+3">
               <span class="btn-num">3</span> Today Evening
             </button>
-            <button type="button" class="freq-btn" data-freq="daily" title="Shortcut: Press 4">
+            <button type="button" class="freq-btn" data-freq="daily" title="Shortcut: Alt+4">
               <span class="btn-num">4</span> Daily
             </button>
-            <button type="button" class="freq-btn" data-freq="weekly" title="Shortcut: Press 5">
+            <button type="button" class="freq-btn" data-freq="weekly" title="Shortcut: Alt+5">
               <span class="btn-num">5</span> Weekly
             </button>
-            <button type="button" class="freq-btn" data-freq="custom" title="Shortcut: Press 6">
+            <button type="button" class="freq-btn" data-freq="custom" title="Shortcut: Alt+6">
               <span class="btn-num">6</span> Custom Date/Time
             </button>
           </div>
@@ -173,7 +184,7 @@
           <img src="assets/logo.png" alt="Vidyasagar Academy Logo" class="about-vsa-logo" />
         </div>
         <h3 class="about-title">Kartavirya – Reminder Companion</h3>
-        <p class="about-version">Version 1.0.0 (Windows 64-bit)</p>
+        <p class="about-version">Version <span id="aboutVersion">…</span> (Windows 64-bit)</p>
         <div class="about-attribution">
           <strong>Developed by:</strong> Prof. Dattaraj S. Vidyasagar and Prof. Yash D. Vidyasagar, for Vidyasagar Academy
         </div>

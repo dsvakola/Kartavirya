@@ -977,3 +977,95 @@ button.btn-secondary:hover {
   background: #f1f5f9;
   color: var(--text-main);
 }
+
+/* ---- v1.1.1: confirmation, toast, recovery warning, Recently Deleted ---- */
+.confirm-dialog {
+  width: 420px;
+  max-width: 90vw;
+}
+
+.confirm-message {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--text-main);
+  word-break: break-word;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 48px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #1e293b;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.3);
+  z-index: 2000;
+  max-width: 90vw;
+}
+
+.toast.hidden,
+.toast-action.hidden,
+.load-warning.hidden,
+.trash-bar.hidden {
+  display: none;
+}
+
+.toast-action {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toast-action:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.load-warning {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  background: #fffbeb;
+  border: 1.5px solid #fcd34d;
+  color: #92400e;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.trash-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.overdue-tag {
+  font-weight: 600;
+  color: var(--danger-color);
+}
+
+.btn-card-action.btn-delete-forever:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: var(--danger-color);
+}

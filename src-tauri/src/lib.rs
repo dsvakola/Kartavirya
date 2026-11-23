@@ -1,178 +1,93 @@
-use chrono::{DateTime, Duration, Local};
-use serde::{Deserialize, Serialize};
-use std::fs;
+mod schedule;
+mod storage;
+
+use crate::schedule::Reminder;
+use chrono::Local;
+use serde::Serialize;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration as StdDuration;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_opener::OpenerExt;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Reminder {
-    pub id: String,
-    pub text: String,
-    pub created_at: String,
-    pub remind_type: String, // "hourly", "today_evening", "daily", "weekly", "custom"
-    pub remind_at: String,
-    pub is_completed: bool,
-    pub snooze_count: u32,
-    #[serde(default)]
-    pub last_alerted: Option<String>,
+const PRIVACY_URL: &str = "https://github.com/dsvakola/Kartavirya/blob/main/privacy-policy.md";
+const WEBSITE_URL: &str = "https://vsa.edu.in/";
+const EMAIL_URL: &str = "mailto:softinquiry@vsa.edu.in";
+
+pub struct Shared {
+    reminders: Mutex<Vec<Reminder>>,
+    storage_path: PathBuf,
+    minimize_to_tray: Mutex<bool>,
+    /// Ids of reminders waiting in the floating alert window, oldest first.
+    alert_queue: Mutex<Vec<String>>,
+    load_warning: Mutex<Option<String>>,
 }
 
-pub struct AppState {
-    pub reminders: Arc<Mutex<Vec<Reminder>>>,
-    pub storage_path: PathBuf,
-    pub minimize_to_tray: Arc<Mutex<bool>>,
+type AppState<'a> = State<'a, Arc<Shared>>;
+
+/// Locks a mutex, recovering the data even if another thread panicked.
+fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(|e| e.into_inner())
 }
 
-fn load_storage(path: &PathBuf) -> Vec<Reminder> {
-    if path.exists() {
-        if let Ok(data) = fs::read_to_string(path) {
-            if let Ok(list) = serde_json::from_str::<Vec<Reminder>>(&data) {
-                return list;
-            }
+/// Runs `f` on the reminder list, saves it, and tells all windows.
+fn mutate<R>(
+    app: &AppHandle,
+    shared: &Shared,
+    f: impl FnOnce(&mut Vec<Reminder>) -> Result<R, String>,
+) -> Result<R, String> {
+    let result = {
+        let mut list = lock(&shared.reminders);
+        let before = list.clone();
+        let result = f(&mut list)?;
+        if let Err(e) = storage::save(&shared.storage_path, &list) {
+            // Keep memory and disk in step: undo the change if it could not be saved.
+            *list = before;
+            return Err(e);
         }
-    }
-    Vec::new()
-}
-
-fn save_storage(path: &PathBuf, list: &[Reminder]) {
-    if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-    if let Ok(json) = serde_json::to_string_pretty(list) {
-        let _ = fs::write(path, json);
-    }
-}
-
-// Commands
-#[tauri::command]
-fn get_reminders(state: State<AppState>) -> Vec<Reminder> {
-    let lock = state.reminders.lock().unwrap();
-    lock.clone()
-}
-
-#[tauri::command]
-fn add_reminder(
-    app: AppHandle,
-    state: State<AppState>,
-    text: String,
-    remind_type: String,
-    remind_at: String,
-) -> Result<Reminder, String> {
-    let now = Local::now().to_rfc3339();
-    let reminder = Reminder {
-        id: Uuid::new_v4().to_string(),
-        text,
-        created_at: now,
-        remind_type,
-        remind_at,
-        is_completed: false,
-        snooze_count: 0,
-        last_alerted: None,
+        result
     };
-
-    {
-        let mut lock = state.reminders.lock().unwrap();
-        lock.insert(0, reminder.clone());
-        save_storage(&state.storage_path, &lock);
-    }
-
     let _ = app.emit("reminder-updated", ());
-    Ok(reminder)
+    Ok(result)
 }
 
-#[tauri::command]
-fn update_reminder(
-    app: AppHandle,
-    state: State<AppState>,
-    id: String,
-    text: String,
-    remind_type: String,
-    remind_at: String,
-) -> Result<(), String> {
-    {
-        let mut lock = state.reminders.lock().unwrap();
-        if let Some(item) = lock.iter_mut().find(|r| r.id == id) {
-            item.text = text;
-            item.remind_type = remind_type;
-            item.remind_at = remind_at;
-        }
-        save_storage(&state.storage_path, &lock);
-    }
-
-    let _ = app.emit("reminder-updated", ());
-    Ok(())
+fn find<'a>(list: &'a mut [Reminder], id: &str) -> Result<&'a mut Reminder, String> {
+    list.iter_mut()
+        .find(|r| r.id == id)
+        .ok_or_else(|| "This reminder no longer exists.".to_string())
 }
 
-#[tauri::command]
-fn toggle_reminder(app: AppHandle, state: State<AppState>, id: String) -> Result<(), String> {
-    {
-        let mut lock = state.reminders.lock().unwrap();
-        if let Some(item) = lock.iter_mut().find(|r| r.id == id) {
-            item.is_completed = !item.is_completed;
-        }
-        save_storage(&state.storage_path, &lock);
+fn remove_from_alerts(app: &AppHandle, shared: &Shared, id: &str) {
+    let empty = {
+        let mut q = lock(&shared.alert_queue);
+        q.retain(|x| x != id);
+        q.is_empty()
+    };
+    let _ = app.emit_to("alert", "alerts-changed", ());
+    if empty && let Some(win) = app.get_webview_window("alert") {
+        let _ = win.hide();
     }
-
-    let _ = app.emit("reminder-updated", ());
-    Ok(())
 }
 
-#[tauri::command]
-fn delete_reminder(app: AppHandle, state: State<AppState>, id: String) -> Result<(), String> {
-    {
-        let mut lock = state.reminders.lock().unwrap();
-        lock.retain(|r| r.id != id);
-        save_storage(&state.storage_path, &lock);
+fn show_window(app: &AppHandle, label: &str) {
+    if let Some(win) = app.get_webview_window(label) {
+        let _ = win.unminimize();
+        let _ = win.show();
+        let _ = win.set_focus();
     }
-
-    let _ = app.emit("reminder-updated", ());
-    Ok(())
 }
 
-#[tauri::command]
-fn snooze_reminder(
-    app: AppHandle,
-    state: State<AppState>,
-    id: String,
-    minutes: u32,
-) -> Result<(), String> {
-    {
-        let mut lock = state.reminders.lock().unwrap();
-        if let Some(item) = lock.iter_mut().find(|r| r.id == id) {
-            let next_time = Local::now() + Duration::minutes(minutes as i64);
-            item.remind_at = next_time.to_rfc3339();
-            item.snooze_count += 1;
-        }
-        save_storage(&state.storage_path, &lock);
-    }
-
-    let _ = app.emit("reminder-updated", ());
-    Ok(())
-}
-
-#[tauri::command]
-fn show_popup(app: AppHandle) -> Result<(), String> {
+fn show_popup_window(app: &AppHandle) {
     if let Some(popup) = app.get_webview_window("popup") {
         let _ = popup.center();
         let _ = popup.show();
         let _ = popup.set_focus();
     }
-    Ok(())
-}
-
-#[tauri::command]
-fn hide_popup(app: AppHandle) -> Result<(), String> {
-    if let Some(popup) = app.get_webview_window("popup") {
-        let _ = popup.hide();
-    }
-    Ok(())
 }
 
 #[cfg(target_os = "windows")]
@@ -180,150 +95,301 @@ unsafe extern "system" {
     fn MessageBeep(u_type: u32) -> i32;
 }
 
+fn beep() {
+    #[cfg(target_os = "windows")]
+    // SAFETY: MessageBeep takes a plain integer and has no memory effects.
+    unsafe {
+        MessageBeep(0x0000_0040); // MB_ICONASTERISK
+    }
+}
+
+/// Puts reminders in the floating alert window and brings it to the front.
+fn raise_alerts(app: &AppHandle, shared: &Shared, ids: &[String]) {
+    {
+        let mut q = lock(&shared.alert_queue);
+        for id in ids {
+            if !q.contains(id) {
+                q.push(id.clone());
+            }
+        }
+    }
+    beep();
+    if let Some(win) = app.get_webview_window("alert") {
+        let _ = win.center();
+        let _ = win.show();
+        let _ = win.set_always_on_top(true);
+        let _ = win.set_focus();
+        let _ = win.request_user_attention(Some(tauri::UserAttentionType::Critical));
+    }
+    let _ = app.emit_to("alert", "alerts-changed", ());
+}
+
+// ---------------------------------------------------------------- commands
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppInfo {
+    name: String,
+    version: String,
+}
+
 #[tauri::command]
-fn test_reminder_alert(app: AppHandle, state: State<AppState>, id: String) -> Result<(), String> {
-    let reminder_opt = {
-        let lock = state.reminders.lock().unwrap();
-        lock.iter().find(|r| r.id == id).cloned()
+fn get_app_info(app: AppHandle) -> AppInfo {
+    let info = app.package_info();
+    AppInfo {
+        name: info.name.clone(),
+        version: info.version.to_string(),
+    }
+}
+
+#[tauri::command]
+fn open_link(app: AppHandle, target: String) -> Result<(), String> {
+    let url = match target.as_str() {
+        "privacy" => PRIVACY_URL,
+        "website" => WEBSITE_URL,
+        "email" => EMAIL_URL,
+        _ => return Err("Unknown link.".into()),
     };
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|e| format!("Could not open the link: {e}"))
+}
 
-    if let Some(item) = reminder_opt {
-        #[cfg(target_os = "windows")]
-        unsafe {
-            MessageBeep(0x00000040);
-        }
+#[tauri::command]
+fn get_load_warning(state: AppState) -> Option<String> {
+    lock(&state.load_warning).take()
+}
 
-        if let Some(win) = app.get_webview_window("main") {
-            let _ = win.unminimize();
-            let _ = win.show();
-            let _ = win.set_always_on_top(true);
-            let _ = win.set_focus();
-            let _ = win.request_user_attention(Some(tauri::UserAttentionType::Critical));
-            let _ = win.set_always_on_top(false);
-        }
+#[tauri::command]
+fn get_reminders(state: AppState) -> Vec<Reminder> {
+    lock(&state.reminders).clone()
+}
 
-        let _ = app.emit("reminder-alert", &item);
+#[tauri::command]
+fn add_reminder(
+    app: AppHandle,
+    state: AppState,
+    text: String,
+    remind_type: String,
+    remind_at: String,
+) -> Result<Reminder, String> {
+    schedule::validate(&text, &remind_type, Some(&remind_at))?;
+    let reminder = Reminder {
+        id: Uuid::new_v4().to_string(),
+        text: text.trim().to_string(),
+        created_at: Local::now().to_rfc3339(),
+        remind_type,
+        remind_at,
+        is_completed: false,
+        snooze_count: 0,
+        last_alerted: None,
+        base_at: None,
+        deleted_at: None,
+    };
+    let copy = reminder.clone();
+    mutate(&app, &state, move |list| {
+        list.insert(0, copy);
+        Ok(())
+    })?;
+    Ok(reminder)
+}
+
+#[tauri::command]
+fn update_reminder(
+    app: AppHandle,
+    state: AppState,
+    id: String,
+    text: String,
+    remind_type: String,
+    remind_at: Option<String>,
+) -> Result<(), String> {
+    schedule::validate(&text, &remind_type, remind_at.as_deref())?;
+    mutate(&app, &state, |list| {
+        let r = find(list, &id)?;
+        schedule::apply_edit(r, text.trim().to_string(), remind_type, remind_at);
+        Ok(())
+    })
+}
+
+#[tauri::command]
+fn toggle_reminder(app: AppHandle, state: AppState, id: String) -> Result<(), String> {
+    let completed = mutate(&app, &state, |list| {
+        let r = find(list, &id)?;
+        r.is_completed = !r.is_completed;
+        Ok(r.is_completed)
+    })?;
+    if completed {
+        remove_from_alerts(&app, &state, &id);
     }
     Ok(())
 }
 
+/// Moves a reminder to "Recently Deleted". It can be restored from there.
 #[tauri::command]
-fn hide_main_window(app: AppHandle) -> Result<(), String> {
+fn delete_reminder(app: AppHandle, state: AppState, id: String) -> Result<(), String> {
+    mutate(&app, &state, |list| {
+        let r = find(list, &id)?;
+        r.deleted_at = Some(Local::now().to_rfc3339());
+        Ok(())
+    })?;
+    remove_from_alerts(&app, &state, &id);
+    Ok(())
+}
+
+#[tauri::command]
+fn restore_reminder(app: AppHandle, state: AppState, id: String) -> Result<(), String> {
+    mutate(&app, &state, |list| {
+        find(list, &id)?.deleted_at = None;
+        Ok(())
+    })
+}
+
+/// Permanently removes one reminder that is already in "Recently Deleted".
+/// The previous file is still kept as reminders.bak.json.
+#[tauri::command]
+fn delete_forever(app: AppHandle, state: AppState, id: String) -> Result<(), String> {
+    mutate(&app, &state, |list| {
+        let before = list.len();
+        list.retain(|r| !(r.id == id && r.deleted_at.is_some()));
+        if list.len() == before {
+            return Err("Only reminders in Recently Deleted can be removed permanently.".into());
+        }
+        Ok(())
+    })
+}
+
+#[tauri::command]
+fn empty_trash(app: AppHandle, state: AppState) -> Result<usize, String> {
+    mutate(&app, &state, |list| {
+        let before = list.len();
+        list.retain(|r| r.deleted_at.is_none());
+        Ok(before - list.len())
+    })
+}
+
+#[tauri::command]
+fn snooze_reminder(
+    app: AppHandle,
+    state: AppState,
+    id: String,
+    minutes: u32,
+) -> Result<(), String> {
+    if minutes == 0 || minutes > 7 * 24 * 60 {
+        return Err("Snooze time is not valid.".into());
+    }
+    mutate(&app, &state, |list| {
+        schedule::snooze(find(list, &id)?, minutes, Local::now());
+        Ok(())
+    })?;
+    remove_from_alerts(&app, &state, &id);
+    Ok(())
+}
+
+#[tauri::command]
+fn test_reminder_alert(app: AppHandle, state: AppState, id: String) -> Result<(), String> {
+    let exists = lock(&state.reminders).iter().any(|r| r.id == id);
+    if !exists {
+        return Err("This reminder no longer exists.".into());
+    }
+    raise_alerts(&app, &state, &[id]);
+    Ok(())
+}
+
+/// Reminders currently shown in the floating alert window.
+#[tauri::command]
+fn get_alert_queue(state: AppState) -> Vec<Reminder> {
+    let ids = lock(&state.alert_queue).clone();
+    let list = lock(&state.reminders);
+    ids.iter()
+        .filter_map(|id| list.iter().find(|r| &r.id == id).cloned())
+        .collect()
+}
+
+/// Handles a button in the floating alert window: "dismiss", "snooze" or "complete".
+#[tauri::command]
+fn alert_action(app: AppHandle, state: AppState, id: String, action: String) -> Result<(), String> {
+    match action.as_str() {
+        "dismiss" => {}
+        "snooze" => {
+            mutate(&app, &state, |list| {
+                schedule::snooze(find(list, &id)?, 10, Local::now());
+                Ok(())
+            })?;
+        }
+        "complete" => {
+            mutate(&app, &state, |list| {
+                find(list, &id)?.is_completed = true;
+                Ok(())
+            })?;
+        }
+        _ => return Err("Unknown action.".into()),
+    }
+    remove_from_alerts(&app, &state, &id);
+    Ok(())
+}
+
+#[tauri::command]
+fn show_popup(app: AppHandle) {
+    show_popup_window(&app);
+}
+
+#[tauri::command]
+fn hide_popup(app: AppHandle) {
+    if let Some(popup) = app.get_webview_window("popup") {
+        let _ = popup.hide();
+    }
+}
+
+#[tauri::command]
+fn hide_main_window(app: AppHandle) {
     if let Some(win) = app.get_webview_window("main") {
         let _ = win.hide();
     }
-    Ok(())
 }
 
 #[tauri::command]
-fn get_minimize_to_tray(state: State<AppState>) -> bool {
-    let lock = state.minimize_to_tray.lock().unwrap();
-    *lock
+fn get_minimize_to_tray(state: AppState) -> bool {
+    *lock(&state.minimize_to_tray)
 }
 
 #[tauri::command]
-fn set_minimize_to_tray(state: State<AppState>, enabled: bool) -> Result<(), String> {
-    let mut lock = state.minimize_to_tray.lock().unwrap();
-    *lock = enabled;
-    Ok(())
+fn set_minimize_to_tray(state: AppState, enabled: bool) {
+    *lock(&state.minimize_to_tray) = enabled;
 }
 
-// Background scheduler
-fn start_scheduler(app: AppHandle, state_reminders: Arc<Mutex<Vec<Reminder>>>, storage_path: PathBuf) {
-    std::thread::spawn(move || loop {
-        std::thread::sleep(StdDuration::from_secs(5));
+// ------------------------------------------------------- background timer
 
-        let now = Local::now();
-        let mut updated = false;
-        let mut triggered_alerts = Vec::new();
+fn start_scheduler(app: AppHandle, shared: Arc<Shared>) {
+    std::thread::spawn(move || {
+        loop {
+            std::thread::sleep(StdDuration::from_secs(5));
 
-        {
-            let mut lock = state_reminders.lock().unwrap();
-            for reminder in lock.iter_mut() {
-                if reminder.is_completed {
-                    continue;
+            let fired = {
+                let mut list = lock(&shared.reminders);
+                let fired = schedule::process_due(&mut list, Local::now());
+                if !fired.is_empty()
+                    && let Err(e) = storage::save(&shared.storage_path, &list)
+                {
+                    eprintln!("Kartavirya: {e}");
                 }
+                fired
+            };
 
-                if let Ok(due_time) = DateTime::parse_from_rfc3339(&reminder.remind_at) {
-                    if due_time <= now {
-                        // Check if alerted within the last 60 seconds to avoid spam
-                        let should_alert = match &reminder.last_alerted {
-                            Some(last_str) => {
-                                if let Ok(last_dt) = DateTime::parse_from_rfc3339(last_str) {
-                                    now.signed_duration_since(last_dt) > Duration::seconds(60)
-                                } else {
-                                    true
-                                }
-                            }
-                            None => true,
-                        };
-
-                        if should_alert {
-                            reminder.last_alerted = Some(now.to_rfc3339());
-                            triggered_alerts.push(reminder.clone());
-                            updated = true;
-
-                            // Calculate next recurring time if applicable
-                            match reminder.remind_type.as_str() {
-                                "5min" => {
-                                    let next = now + Duration::minutes(5);
-                                    reminder.remind_at = next.to_rfc3339();
-                                }
-                                "hourly" => {
-                                    let next = now + Duration::hours(1);
-                                    reminder.remind_at = next.to_rfc3339();
-                                }
-                                "daily" => {
-                                    let next = now + Duration::days(1);
-                                    reminder.remind_at = next.to_rfc3339();
-                                }
-                                "weekly" => {
-                                    let next = now + Duration::weeks(1);
-                                    reminder.remind_at = next.to_rfc3339();
-                                }
-                                _ => {
-                                    // One-time / custom / today_evening: keep reminder active until user marks done or snoozes
-                                }
-                            }
-                        }
-                    }
-                }
+            if fired.is_empty() {
+                continue;
             }
 
-            if updated {
-                save_storage(&storage_path, &lock);
-            }
-        }
-
-        if !triggered_alerts.is_empty() {
             let _ = app.emit("reminder-updated", ());
-
-            #[cfg(target_os = "windows")]
-            unsafe {
-                MessageBeep(0x00000040); // MB_ICONASTERISK (Windows system chime)
-            }
-
-            if let Some(win) = app.get_webview_window("main") {
-                let _ = win.unminimize();
-                let _ = win.show();
-                let _ = win.set_always_on_top(true);
-                let _ = win.set_focus();
-                let _ = win.request_user_attention(Some(tauri::UserAttentionType::Critical));
-                let _ = win.set_always_on_top(false);
-            }
-
-            for item in triggered_alerts {
-                // Windows toast notification
+            for item in &fired {
                 let _ = app
                     .notification()
                     .builder()
                     .title("Kartavirya – Reminder Due!")
                     .body(&item.text)
                     .show();
-
-                // In-app alert event
-                let _ = app.emit("reminder-alert", &item);
             }
+            let ids: Vec<String> = fired.into_iter().map(|r| r.id).collect();
+            raise_alerts(&app, &shared, &ids);
         }
     });
 }
@@ -331,79 +397,73 @@ fn start_scheduler(app: AppHandle, state_reminders: Arc<Mutex<Vec<Reminder>>>, s
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Must be first: a second launch just brings the running app forward.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_window(app, "main");
+        }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let app_handle = app.handle().clone();
+            let handle = app.handle().clone();
 
-            // Setup storage path: %APPDATA%\Kartavirya\reminders.json
-            let app_data = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+            // %APPDATA%\in.edu.vsa.kartavirya\reminders.json
+            let app_data = app
+                .path()
+                .app_data_dir()
+                .unwrap_or_else(|_| PathBuf::from("."));
             let storage_path = app_data.join("reminders.json");
-            let initial_reminders = load_storage(&storage_path);
-            let reminders_arc = Arc::new(Mutex::new(initial_reminders));
-            let minimize_to_tray_arc = Arc::new(Mutex::new(false));
-            let minimize_to_tray_state = Arc::clone(&minimize_to_tray_arc);
-            let minimize_to_tray_events = Arc::clone(&minimize_to_tray_arc);
+            let loaded = storage::load(&storage_path);
 
-            // State management
-            app.manage(AppState {
-                reminders: Arc::clone(&reminders_arc),
-                storage_path: storage_path.clone(),
-                minimize_to_tray: minimize_to_tray_state,
+            let shared = Arc::new(Shared {
+                reminders: Mutex::new(loaded.list),
+                storage_path,
+                minimize_to_tray: Mutex::new(false),
+                alert_queue: Mutex::new(Vec::new()),
+                load_warning: Mutex::new(loaded.warning),
             });
+            app.manage(Arc::clone(&shared));
 
-            // Start background reminder checker
-            start_scheduler(app_handle.clone(), Arc::clone(&reminders_arc), storage_path);
+            start_scheduler(handle.clone(), Arc::clone(&shared));
 
-            // Register global shortcuts: F12, Ctrl+F12, Alt+F12, and Alt+K
-            for shortcut_key in ["F12", "Ctrl+F12", "Alt+F12", "Alt+K"] {
-                let _ = app.global_shortcut().on_shortcut(shortcut_key, move |app, _shortcut, event| {
-                    if event.state() == ShortcutState::Pressed {
-                        if let Some(popup) = app.get_webview_window("popup") {
-                            let _ = popup.center();
-                            let _ = popup.show();
-                            let _ = popup.set_focus();
+            for key in ["F12", "Ctrl+F12", "Alt+F12", "Alt+K"] {
+                let _ = app
+                    .global_shortcut()
+                    .on_shortcut(key, move |app, _shortcut, event| {
+                        if event.state() == ShortcutState::Pressed {
+                            show_popup_window(app);
                         }
-                    }
-                });
+                    });
             }
 
-            // Setup System Tray
+            // System tray
             let show_i = MenuItem::with_id(app, "show", "Open Dashboard", true, None::<&str>)?;
-            let min_i = MenuItem::with_id(app, "min_tray", "Minimize to System Tray", true, None::<&str>)?;
+            let min_i = MenuItem::with_id(
+                app,
+                "min_tray",
+                "Minimize to System Tray",
+                true,
+                None::<&str>,
+            )?;
             let new_i = MenuItem::with_id(app, "new", "New Reminder (F12)", true, None::<&str>)?;
             let quit_i = MenuItem::with_id(app, "quit", "Quit Kartavirya", true, None::<&str>)?;
             let tray_menu = Menu::with_items(app, &[&show_i, &min_i, &new_i, &quit_i])?;
 
             if let Some(icon) = app.default_window_icon() {
-                let _tray = TrayIconBuilder::new()
+                TrayIconBuilder::new()
                     .icon(icon.clone())
+                    .tooltip("Kartavirya – Reminder Companion")
                     .menu(&tray_menu)
                     .show_menu_on_left_click(false)
                     .on_menu_event(|app, event| match event.id().as_ref() {
-                        "quit" => {
-                            app.exit(0);
-                        }
-                        "show" => {
-                            if let Some(win) = app.get_webview_window("main") {
-                                let _ = win.unminimize();
-                                let _ = win.show();
-                                let _ = win.set_focus();
-                            }
-                        }
+                        "quit" => app.exit(0),
+                        "show" => show_window(app, "main"),
                         "min_tray" => {
                             if let Some(win) = app.get_webview_window("main") {
                                 let _ = win.hide();
                             }
                         }
-                        "new" => {
-                            if let Some(win) = app.get_webview_window("popup") {
-                                let _ = win.center();
-                                let _ = win.show();
-                                let _ = win.set_focus();
-                            }
-                        }
+                        "new" => show_popup_window(app),
                         _ => {}
                     })
                     .on_tray_icon_event(|tray, event| {
@@ -415,12 +475,12 @@ pub fn run() {
                         {
                             let app = tray.app_handle();
                             if let Some(win) = app.get_webview_window("main") {
-                                if win.is_visible().unwrap_or(false) && !win.is_minimized().unwrap_or(false) {
+                                if win.is_visible().unwrap_or(false)
+                                    && !win.is_minimized().unwrap_or(false)
+                                {
                                     let _ = win.hide();
                                 } else {
-                                    let _ = win.unminimize();
-                                    let _ = win.show();
-                                    let _ = win.set_focus();
+                                    show_window(app, "main");
                                 }
                             }
                         }
@@ -428,23 +488,44 @@ pub fn run() {
                     .build(app)?;
             }
 
-            // Intercept close button and minimize event on main window
+            // Main window: close hides to tray; minimize optionally hides to tray.
             if let Some(main_win) = app.get_webview_window("main") {
-                let main_win_clone = main_win.clone();
-                main_win.on_window_event(move |event| {
-                    match event {
-                        tauri::WindowEvent::CloseRequested { api, .. } => {
-                            api.prevent_close();
-                            let _ = main_win_clone.hide();
-                        }
-                        tauri::WindowEvent::Resized(size) => {
-                            if size.width == 0 && size.height == 0 {
-                                if *minimize_to_tray_events.lock().unwrap() {
-                                    let _ = main_win_clone.hide();
-                                }
-                            }
-                        }
-                        _ => {}
+                let win = main_win.clone();
+                let shared_events = Arc::clone(&shared);
+                main_win.on_window_event(move |event| match event {
+                    tauri::WindowEvent::CloseRequested { api, .. } => {
+                        api.prevent_close();
+                        let _ = win.hide();
+                    }
+                    tauri::WindowEvent::Resized(size)
+                        if size.width == 0
+                            && size.height == 0
+                            && *lock(&shared_events.minimize_to_tray) =>
+                    {
+                        let _ = win.hide();
+                    }
+                    _ => {}
+                });
+            }
+
+            // Popup and alert windows are reused, so closing them (Alt+F4) only hides them.
+            if let Some(popup) = app.get_webview_window("popup") {
+                let win = popup.clone();
+                popup.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = win.hide();
+                    }
+                });
+            }
+            if let Some(alert) = app.get_webview_window("alert") {
+                let win = alert.clone();
+                let shared_alert = Arc::clone(&shared);
+                alert.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        lock(&shared_alert.alert_queue).clear();
+                        let _ = win.hide();
                     }
                 });
             }
@@ -452,13 +533,21 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            get_app_info,
+            open_link,
+            get_load_warning,
             get_reminders,
             add_reminder,
             update_reminder,
             toggle_reminder,
             delete_reminder,
+            restore_reminder,
+            delete_forever,
+            empty_trash,
             snooze_reminder,
             test_reminder_alert,
+            get_alert_queue,
+            alert_action,
             show_popup,
             hide_popup,
             hide_main_window,
@@ -466,5 +555,5 @@ pub fn run() {
             set_minimize_to_tray
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .unwrap_or_else(|e| eprintln!("Kartavirya could not start: {e}"));
 }
